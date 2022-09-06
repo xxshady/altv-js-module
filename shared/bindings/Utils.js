@@ -100,7 +100,7 @@ class ConsoleCommand {
     static #handlers = new Map();
 
     static {
-        alt.on('consoleCommand', (name, ...args) => {
+        alt.on("consoleCommand", (name, ...args) => {
             ConsoleCommand.#handlers
                 .get(name)
                 ?.forEach(h => h(...args));
@@ -108,7 +108,7 @@ class ConsoleCommand {
     }
 
     destroyed = false;
-    name = '';
+    name = "";
     handler = () => {};
 
     constructor(name, handler) {
@@ -122,7 +122,7 @@ class ConsoleCommand {
 
     destroy() {
         if (this.destroyed)
-            throw new Error('ConsoleCommand already destroyed');
+            throw new Error("ConsoleCommand already destroyed");
         this.destroyed = true;
 
         ConsoleCommand.#handlers
