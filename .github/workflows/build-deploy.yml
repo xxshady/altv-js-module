@@ -1,12 +1,7 @@
 name: Build & deploy server
 on:
   push:
-    branches-ignore:
-      - '**'
-    tags:
-      - 'dev/*.*-dev*'
-      - 'rc/*.*-rc*'
-      - 'release/*.*'
+    branches: [ dev ]
 
 jobs:
   build-windows:
@@ -83,82 +78,20 @@ jobs:
           name: js-module-linux
           path: ./server/upload/
 
-  deploy-cdn:
-    name: Deploy release to alt:V CDN
-    runs-on: ubuntu-18.04
-    needs: [build-linux, build-windows]
-    steps:
-      - name: Set up Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12.x
-
-      - name: Cache node_modules
-        uses: actions/cache@v2
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}
-
-      - name: Download windows artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: js-module-windows
-          path: dist-windows
-
-      - name: Download linux artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: js-module-linux
-          path: dist-linux
-
-      - name: Extract version
-        id: version
-        shell: bash
-        run: |
-          TAG=${GITHUB_REF/refs\/tags\//}
-          echo ::set-output name=BRANCH::${TAG/\/*}
-          echo ::set-output name=VERSION::${TAG/*\/}
-
-      - name: Install upload tool
-        run: npm i @altmp/upload-tool@latest
-
-      - name: Deploy windows artifacts to cdn
-        run: npx alt-upload dist-windows js-module/$BRANCH/x64_win32 $VERSION
-        env:
-          CI_UPLOAD_URL: ${{ secrets.CI_UPLOAD_URL }}
-          CI_DEPLOY_TOKEN: ${{ secrets.CI_DEPLOY_TOKEN }}
-          BRANCH: ${{ steps.version.outputs.BRANCH }}
-          VERSION: ${{ steps.version.outputs.VERSION }}
-
-      - name: Deploy linux artifacts to cdn
-        run: npx alt-upload dist-linux js-module/$BRANCH/x64_linux $VERSION
-        env:
-          CI_UPLOAD_URL: ${{ secrets.CI_UPLOAD_URL }}
-          CI_DEPLOY_TOKEN: ${{ secrets.CI_DEPLOY_TOKEN }}
-          BRANCH: ${{ steps.version.outputs.BRANCH }}
-          VERSION: ${{ steps.version.outputs.VERSION }}
-
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-18.04
-    needs: [build-linux, build-windows]
+    needs: [build-windows]
     steps:
       - name: Download windows artifacts
         uses: actions/download-artifact@v2
         with:
           name: js-module-windows
           path: dist-windows
-
-      - name: Download linux artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: js-module-linux
-          path: dist-linux
 
       - name: Zip artifacts
         run: |
           zip -r -j js-module-windows dist-windows
-          zip -r -j js-module-linux dist-linux
 
       - name: Extract version
         id: version
@@ -200,7 +133,7 @@ jobs:
   delete-artifacts:
     name: Delete artifacts
     runs-on: ubuntu-18.04
-    needs: [ create-release, deploy-cdn ]
+    needs: [ create-release ]
     if: ${{ always() }}
     steps:
       - name: Delete artifacts
