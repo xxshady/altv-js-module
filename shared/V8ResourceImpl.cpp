@@ -133,7 +133,13 @@ void V8ResourceImpl::OnTick()
 
 void V8ResourceImpl::BindEntity(v8::Local<v8::Object> val, alt::IBaseObject* handle)
 {
-    V8Entity* ent = new V8Entity(GetContext(), V8Entity::GetClass(handle), val, handle);
+    V8Class* entityClass = V8Entity::GetClass(handle);
+    if(!entityClass)
+    {
+        Log::Error << "Failed to bind entity: Type " << (int)handle->GetType() << " has no class" << Log::Endl;
+        return;
+    }
+    V8Entity* ent = new V8Entity(GetContext(), entityClass, val, handle);
     entities.insert({ handle, ent });
 }
 
@@ -195,18 +201,6 @@ bool V8ResourceImpl::IsBaseObject(v8::Local<v8::Value> val)
 
 void V8ResourceImpl::OnCreateBaseObject(alt::IBaseObject* handle)
 {
-    // Log::Debug << "OnCreateBaseObject " << handle.Get() << " " << (entities.find(handle.Get()) != entities.end()) << Log::Endl;
-
-    /*if (entities.find(handle.Get()) == entities.end())
-    {
-            v8::Locker locker(isolate);
-            v8::Isolate::Scope isolateScope(isolate);
-            v8::HandleScope handleScope(isolate);
-
-            v8::Context::Scope scope(GetContext());
-            CreateEntity(handle.Get());
-    }*/
-
     NotifyPoolUpdate(handle);
 }
 
@@ -220,12 +214,19 @@ void V8ResourceImpl::OnRemoveBaseObject(alt::IBaseObject* handle)
     v8::Context::Scope scope(GetContext());
 
     V8Entity* ent = GetEntity(handle);
-
     if(!ent) return;
 
-    entities.erase(handle);
+    auto entityType = handle->GetType();
+    if (entityType == alt::IBaseObject::Type::PLAYER
+        || entityType == alt::IBaseObject::Type::LOCAL_PLAYER
+        || entityType == alt::IBaseObject::Type::VEHICLE
+    ) {
+        std::vector<V8Helpers::EventCallback*> handlers = GetLocalHandlers("removeEntity");
+        std::vector<v8::Local<v8::Value>> args{ ent->GetJSVal(isolate) };
+        InvokeEventHandlers(nullptr, handlers, args);
+    }
 
-    // TODO: ent->SetWeak();
+    entities.erase(handle);
     ent->GetJSVal(isolate)->SetInternalField(0, v8::External::New(isolate, nullptr));
     delete ent;
 }

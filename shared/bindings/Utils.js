@@ -779,14 +779,14 @@ if (alt.isClient && !alt.isWorker) {
     async function registerPedheadshotBase64(headshotNative, ped) {
         let error = null;
         let headshot = null;
-    
+
         try {
             headshot = headshotNative(ped);
             alt.Utils.assert(
                 native.isPedheadshotValid(headshot),
                 `Ped or player is invalid: ${ped} (headshot: ${headshot})`,
             );
-    
+
             await alt.Utils.waitFor(() => native.isPedheadshotReady(headshot));
             return alt.getHeadshotBase64(headshot);
         } catch (cause) {
@@ -794,24 +794,24 @@ if (alt.isClient && !alt.isWorker) {
         } finally {
             native.unregisterPedheadshot(headshot);
         }
-    
+
         throw error;
     }
 
     alt.Utils.registerPedheadshotBase64 = registerPedheadshotBase64.bind(null, native.registerPedheadshot);
-    alt.Utils.registerPedheadshot3Base64 = registerPedheadshotBase64.bind(null, native.registerPedheadshot3);
+    alt.Utils.registerPedheadshot3Base64 = registerPedheadshotBase64.bind(null, native.registerPedheadshotHires);
     alt.Utils.registerPedheadshotTransparentBase64 = registerPedheadshotBase64.bind(null, native.registerPedheadshotTransparent);
 
     const getClosestEntity = (getEntities) => (options = {}) => {
         return getClosestEntityFromPool(
-            getEntities, 
+            getEntities,
             {
                 pos: options.pos ?? alt.Player.local.pos,
                 ...options
             }
         );
     };
-    
+
     alt.Utils.getClosestVehicle = getClosestEntity(() => alt.Vehicle.streamedIn);
     alt.Utils.getClosestPlayer = getClosestEntity(() => alt.Player.streamedIn);
     alt.Utils.getClosestWorldObject = getClosestEntity(() => alt.Object.allWorld);
