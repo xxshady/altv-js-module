@@ -1,3 +1,4 @@
+// // @ts-check // uncomment if you need typescript checks, e.g. for gta natives update
 /// <reference path="../../bindings.d.ts"/>
 // clang-format off
 // Utils JS bindings
@@ -393,14 +394,14 @@ if (alt.isClient && !alt.isWorker) {
         assertDrawTextArgs(text, font, scale, color, outline, dropShadow)
         assertVector3(pos3d, "Expected Vector3 as second argument")
 
-        native.setDrawOrigin(pos3d.x, pos3d.y, pos3d.z, 0)
-        native.beginTextCommandDisplayText("STRING")
-        native.addTextComponentSubstringPlayerName(text)
-        native.setTextFont(font)
-        native.setTextScale(1, scale)
-        native.setTextWrap(0.0, 1.0)
-        native.setTextCentre(true)
-        native.setTextColour(...color.toArray())
+        native.setDrawOrigin(pos3d.x, pos3d.y, pos3d.z, false);
+        native.beginTextCommandDisplayText("STRING");
+        native.addTextComponentSubstringPlayerName(text);
+        native.setTextFont(font);
+        native.setTextScale(1, scale);
+        native.setTextWrap(0.0, 1.0);
+        native.setTextCentre(true);
+        native.setTextColour(...color.toArray());
 
         if (outline) native.setTextOutline()
         if (dropShadow) {
