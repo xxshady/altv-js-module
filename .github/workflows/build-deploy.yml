@@ -9,7 +9,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -34,20 +34,27 @@ jobs:
         run: |
           cd server
           mkdir upload\modules\js-module
+          mkdir debug
           copy dist\js-module.dll upload\modules\js-module
           copy dist\libnode.dll upload\modules\js-module
+          copy dist\js-module.pdb debug
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: js-module-windows
           path: ./server/upload/
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: js-module-windows-debug
+          path: ./server/debug
 
   build-linux:
     name: Build linux release
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -73,21 +80,88 @@ jobs:
           cp ./dist/libjs-module.so ./upload/modules/js-module
           cp ./dist/libnode.so.102 ./upload/modules/js-module
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: js-module-linux
           path: ./server/upload/
 
-  create-release:
-    name: Create GitHub Release
-    runs-on: ubuntu-18.04
-    needs: [build-windows]
+  deploy-cdn:
+    name: Deploy release to alt:V CDN
+    runs-on: ubuntu-20.04
+    needs: [build-linux, build-windows]
     steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}
+
       - name: Download windows artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: js-module-windows
           path: dist-windows
+
+      - name: Download linux artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: js-module-linux
+          path: dist-linux
+
+      - name: Extract version
+        id: version
+        shell: bash
+        run: |
+          TAG=${GITHUB_REF/refs\/tags\//}
+          echo ::set-output name=BRANCH::${TAG/\/*}
+          echo ::set-output name=VERSION::${TAG/*\/}
+
+      - name: Install upload tool
+        run: npm i @altmp/upload-tool@latest
+
+      - name: Deploy windows artifacts to cdn
+        run: npx alt-upload dist-windows js-module/$BRANCH/x64_win32 $VERSION
+        env:
+          CI_UPLOAD_URL: ${{ secrets.CI_UPLOAD_URL }}
+          CI_DEPLOY_TOKEN: ${{ secrets.CI_DEPLOY_TOKEN }}
+          BRANCH: ${{ steps.version.outputs.BRANCH }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+
+      - name: Deploy linux artifacts to cdn
+        run: npx alt-upload dist-linux js-module/$BRANCH/x64_linux $VERSION
+        env:
+          CI_UPLOAD_URL: ${{ secrets.CI_UPLOAD_URL }}
+          CI_DEPLOY_TOKEN: ${{ secrets.CI_DEPLOY_TOKEN }}
+          BRANCH: ${{ steps.version.outputs.BRANCH }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-20.04
+    needs: [build-linux, build-windows]
+    steps:
+      - name: Download windows artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: js-module-windows
+          path: dist-windows
+
+      - name: Download windows debug artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: js-module-windows-debug
+          path: dist-windows
+
+      - name: Download linux artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: js-module-linux
+          path: dist-linux
 
       - name: Zip artifacts
         run: |
@@ -132,13 +206,14 @@ jobs:
 
   delete-artifacts:
     name: Delete artifacts
-    runs-on: ubuntu-18.04
-    needs: [ create-release ]
+    runs-on: ubuntu-20.04
+    needs: [ create-release, deploy-cdn ]
     if: ${{ always() }}
     steps:
       - name: Delete artifacts
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: |
             js-module-linux
             js-module-windows
+            js-module-windows-debug
