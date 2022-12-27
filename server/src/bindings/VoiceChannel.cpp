@@ -76,12 +76,12 @@ static void GetPlayers(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8:
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
     V8_GET_THIS_BASE_OBJECT(channel, IVoiceChannel);
 
-    auto players = channel->GetPlayers();
+    std::vector players = channel->GetPlayers();
     size_t size = players.size();
     v8::Local<v8::Array> playersArr = v8::Array::New(isolate, size);
     for(size_t i = 0; i < size; ++i)
     {
-        playersArr->Set(ctx, i, resource->GetBaseObjectOrNull(players[i]));
+        playersArr->Set(ctx, i, resource->GetOrCreateEntity(players[i], "Player")->GetJSVal(isolate));
     }
     V8_RETURN(playersArr);
 }

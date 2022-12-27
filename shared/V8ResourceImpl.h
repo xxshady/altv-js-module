@@ -11,6 +11,7 @@
 #include "V8Timer.h"
 
 #include "IRuntimeEventHandler.h"
+#include "V8Helpers.h"
 
 class V8ResourceImpl : public alt::IResource::Impl
 {
@@ -69,14 +70,28 @@ public:
         remoteGenericHandlers.push_back(V8Helpers::EventCallback{ isolate, cb, std::move(location), once });
     }
 
-    void UnsubscribeLocal(const std::string& ev, v8::Local<v8::Function> cb)
+    void UnsubscribeLocal(const std::string& ev, v8::Local<v8::Function> cb, V8Helpers::SourceLocation&& location)
     {
         auto range = localHandlers.equal_range(ev);
+        bool anyHandlerRemoved = false;
 
         for(auto it = range.first; it != range.second; ++it)
         {
-            if(it->second.fn.Get(isolate)->StrictEquals(cb)) it->second.removed = true;
+            if(it->second.fn.Get(isolate)->StrictEquals(cb))
+            {
+                it->second.removed = true;
+                anyHandlerRemoved = true;
+            }
         }
+
+        if(!anyHandlerRemoved)
+        {
+            Log::Warning << 
+                location.ToString() << " alt.off was called for event \"" << ev << 
+                "\" with function reference that was not subscribed" << Log::Endl;
+            return;
+        }
+
         alt::CEvent::Type type = V8Helpers::EventHandler::GetTypeForEventName(ev);
         if(type != alt::CEvent::Type::NONE) IRuntimeEventHandler::Instance().EventHandlerRemoved(type);
     }
@@ -127,15 +142,11 @@ public:
         InvokeEventHandlers(nullptr, GetLocalHandlers("resourceError"), args);
     }
 
-    V8Entity* GetEntity(alt::IBaseObject* handle, const char* className = "")
+    V8Entity* GetEntity(alt::IBaseObject* handle)
     {
         auto it = entities.find(handle);
 
-        if(it == entities.end())
-        {
-            Log::Error << __FUNCTION__ << ": Invalid entity with type " << className << Log::Endl;
-            return nullptr;
-        }
+        if(it == entities.end()) return nullptr;
 
         return it->second;
     }
