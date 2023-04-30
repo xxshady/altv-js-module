@@ -59,9 +59,15 @@
     auto val = V8Entity::Get(info.This()->GetInternalField((idx)-1)->ToObject(isolate->GetEnteredOrMicrotaskContext()).ToLocalChecked());
 
 // idx starts with 1
-#define V8_GET_THIS_INTERNAL_FIELD_ENTITY(idx, val, type)                                                                   \
-    V8_CHECK(info.This()->InternalFieldCount() > idx - 1, "Invalid internal field count (is the 'this' context correct?)"); \
-    auto val = dynamic_cast<type*>(V8Entity::Get(info.This()->GetInternalField((idx)-1)->ToObject(isolate->GetEnteredOrMicrotaskContext()).ToLocalChecked())->GetHandle());
+#define V8_GET_THIS_INTERNAL_FIELD_ENTITY(idx, val, type)                                                                                            \
+    type* val;                                                                                                                                       \
+    {                                                                                                                                                \
+        V8_CHECK(info.This()->InternalFieldCount() > idx - 1, "Invalid internal field count (is the 'this' context correct?)");                      \
+        V8Entity* __val = V8Entity::Get(info.This()->GetInternalField((idx)-1)->ToObject(isolate->GetEnteredOrMicrotaskContext()).ToLocalChecked()); \
+        V8_CHECK(__val, "baseobject is invalid");                                                                                                    \
+        val = dynamic_cast<type*>(__val->GetHandle());                                                                                               \
+        V8_CHECK(val, "baseobject is not of type " #type);                                                                                           \
+    }
 
 // idx starts with 1
 #define V8_GET_THIS_INTERNAL_FIELD_INTEGER(idx, val)                                                                        \
@@ -133,6 +139,10 @@
 #define V8_TO_VECTOR2_INT(v8Val, val) \
     alt::Vector2i val;                \
     V8_CHECK(V8Helpers::SafeToVector2Int((v8Val), ctx, val), "Failed to convert value to Vector2")
+
+#define V8_TO_QUATERNION(v8Val, val) \
+    alt::Quaternion val;             \
+    V8_CHECK(V8Helpers::SafeToQuaternion((v8Val), ctx, val), "Failed to convert value to Quaternion")
 
 #define V8_TO_RGBA(v8Val, val) \
     alt::RGBA val;             \
@@ -255,6 +265,17 @@
     uint32_t val;                \
     V8_CHECK(V8Helpers::SafeToUInt32(info[(idx)-1], ctx, val), "Failed to convert argument " #idx " to uint32")
 
+#define V8_ARG_TO_UINT_OPT(idx, val, defaultVal)                                                                     \
+    uint32_t val;                                                                                                    \
+    if(info.Length() >= (idx))                                                                                       \
+    {                                                                                                                \
+        V8_CHECK(V8Helpers::SafeToUInt32(info[(idx)-1], ctx, val), "Failed to convert argument " #idx " to uint32"); \
+    }                                                                                                                \
+    else                                                                                                             \
+    {                                                                                                                \
+        val = defaultVal;                                                                                            \
+    }
+
 // idx starts with 1
 #define V8_ARG_TO_INT32(idx, val) \
     int32_t val;                  \
@@ -290,6 +311,7 @@
 #define V8_RETURN_INT64(val)      V8_RETURN(v8::BigInt::New(isolate, static_cast<int64_t>(val)))
 #define V8_RETURN_VECTOR3(val)    V8_RETURN(resource->CreateVector3(val))
 #define V8_RETURN_VECTOR2(val)    V8_RETURN(resource->CreateVector2(val))
+#define V8_RETURN_QUATERNION(val) V8_RETURN(resource->CreateQuaternion(val))
 #define V8_RETURN_RGBA(val)       V8_RETURN(resource->CreateRGBA(val))
 #define V8_RETURN_ENUM(val)       V8_RETURN(uint32_t(val))
 
@@ -310,4 +332,10 @@
     V8_LOCAL_EVENT_HANDLER name;               \
     name.Reference();
 
-#define V8_DEPRECATE(oldName, newName) Log::Warning << oldName << " is deprecated and will be removed in future versions. Consider using " << newName << " instead" << Log::Endl;
+#define V8_DEPRECATE(oldName, newName)                                                                                                                                                    \
+    {                                                                                                                                                                                     \
+        V8_GET_ISOLATE();                                                                                                                                                                 \
+        V8_GET_RESOURCE();                                                                                                                                                                \
+        Log::Warning << V8Helpers::SourceLocation::GetCurrent(isolate, resource).ToString() << " " << oldName << " is deprecated and will be removed in future versions. Consider using " \
+                     << newName << " instead" << Log::Endl;                                                                                                                               \
+    }

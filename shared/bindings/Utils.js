@@ -270,10 +270,10 @@ function getClosestEntityFromPool(getEntities, options = {}) {
 
 // Client only
 if (alt.isClient && !alt.isWorker) {
-    alt.Utils.requestModel = async function (model, timeout = 1000) {
-        const _model = model
-        alt.Utils.assert(typeof model === "string" || typeof model === "number", "Expected a string or number as first argument")
-        alt.Utils.assert(typeof timeout === "number", "Expected a number as second argument")
+    alt.Utils.requestModel = async function (model, timeout = 5000) {
+        const _model = model;
+        alt.Utils.assert(typeof model === "string" || typeof model === "number", "Expected a string or number as first argument");
+        alt.Utils.assert(typeof timeout === "number", "Expected a number as second argument");
 
         if (typeof model === "string") model = alt.hash(model)
         alt.Utils.assert(native.isModelValid(model), typeof _model === "string"
@@ -288,10 +288,10 @@ if (alt.isClient && !alt.isWorker) {
         }
     }
 
-    alt.Utils.requestAnimDict = async function (animDict, timeout = 1000) {
-        alt.Utils.assert(typeof animDict === "string", "Expected a string as first argument")
-        alt.Utils.assert(typeof timeout === "number", "Expected a number as second argument")
-        alt.Utils.assert(native.doesAnimDictExist(animDict), `Anim dict '${animDict}' not valid`)
+    alt.Utils.requestAnimDict = async function (animDict, timeout = 5000) {
+        alt.Utils.assert(typeof animDict === "string", "Expected a string as first argument");
+        alt.Utils.assert(typeof timeout === "number", "Expected a number as second argument");
+        alt.Utils.assert(native.doesAnimDictExist(animDict), `Anim dict '${animDict}' not valid`);
 
         try {
             native.requestAnimDict(animDict)
@@ -301,9 +301,9 @@ if (alt.isClient && !alt.isWorker) {
         }
     }
 
-    alt.Utils.requestAnimSet = async function (animSet, timeout = 1000) {
-        alt.Utils.assert(typeof animSet === "string", "Expected a string as first argument")
-        alt.Utils.assert(typeof timeout === "number", "Expected a number as second argument")
+    alt.Utils.requestAnimSet = async function (animSet, timeout = 5000) {
+        alt.Utils.assert(typeof animSet === "string", "Expected a string as first argument");
+        alt.Utils.assert(typeof timeout === "number", "Expected a number as second argument");
 
         try {
             native.requestAnimSet(animSet)
@@ -315,10 +315,10 @@ if (alt.isClient && !alt.isWorker) {
 
     alt.Utils.requestClipSet = alt.Utils.requestAnimSet
 
-    alt.Utils.requestCutscene = async function (cutsceneName, flags, timeout = 1000) {
-        alt.Utils.assert(typeof cutsceneName === "string", "Expected a string as first argument")
-        alt.Utils.assert(typeof flags === "number" || typeof flags === "string", "Expected a number or string as second argument")
-        alt.Utils.assert(typeof timeout === "number", "Expected a number as third argument")
+    alt.Utils.requestCutscene = async function (cutsceneName, flags, timeout = 5000) {
+        alt.Utils.assert(typeof cutsceneName === "string", "Expected a string as first argument");
+        alt.Utils.assert(typeof flags === "number" || typeof flags === "string", "Expected a number or string as second argument");
+        alt.Utils.assert(typeof timeout === "number", "Expected a number as third argument");
 
         try {
             native.requestCutscene(cutsceneName, typeof flags === "string" ? parseInt(flags) : flags)
@@ -330,7 +330,7 @@ if (alt.isClient && !alt.isWorker) {
 
     // Shortcut for alt.Object
     // TODO: Make client/server only bindings work
-    alt.Object.prototype.waitForSpawn = function(timeout = 2000) {
+    alt.Object.prototype.waitForSpawn = function (timeout = 2000) {
         return alt.Utils.waitFor(() => this.scriptID !== 0, timeout);
     }
 
@@ -832,7 +832,7 @@ if (alt.isClient && !alt.isWorker) {
             this._altAddListener = (_, handler) => alt.onServer(handler);
             this._altRemoveListener = (_, handler) => alt.offServer(handler);
         }
-    
+
         constructor(handler) {
             super(null, handler);
         }

@@ -74,15 +74,7 @@ static void EmitClient(const v8::FunctionCallbackInfo<v8::Value>& info)
 
     MValueArgs mvArgs;
 
-    for(int i = 2; i < info.Length(); ++i) mvArgs.Push(V8Helpers::V8ToMValue(info[i], false));
-
-    if(info[0]->IsNull())
-    {
-        // Deprecation added: 06/08/2022 (version 13)
-        V8_DEPRECATE("emitClient with null", "emitAllClients");
-        ICore::Instance().TriggerClientEventForAll(eventName, mvArgs);
-        return;
-    }
+    for(int i = 2; i < info.Length(); ++i) mvArgs.emplace_back(V8Helpers::V8ToMValue(info[i], false));
 
     if(info[0]->IsArray())
     {
@@ -111,11 +103,57 @@ static void EmitClient(const v8::FunctionCallbackInfo<v8::Value>& info)
     }
     else
     {
-        // if first argument is not null and not an array this event gets sent to the specific player
+        // if first argument not an array this event gets sent to the specific player
         V8Entity* v8Player = V8Entity::Get(info[0]);
-        V8_CHECK(v8Player && v8Player->GetHandle() && v8Player->GetHandle()->GetType() == alt::IBaseObject::Type::PLAYER, "player or null expected");
+        V8_CHECK(v8Player && v8Player->GetHandle() && v8Player->GetHandle()->GetType() == alt::IBaseObject::Type::PLAYER, "player or player array expected");
 
         ICore::Instance().TriggerClientEvent(dynamic_cast<alt::IPlayer*>(v8Player->GetHandle()), eventName, mvArgs);
+    }
+}
+
+static void EmitClientUnreliable(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_CHECK_ARGS_LEN_MIN(2);
+
+    V8_ARG_TO_STRING(2, eventName);
+
+    MValueArgs mvArgs;
+
+    for(int i = 2; i < info.Length(); ++i) mvArgs.emplace_back(V8Helpers::V8ToMValue(info[i], false));
+
+    if(info[0]->IsArray())
+    {
+        // if first argument is an array of players this event will be sent to every player in array
+        v8::Local<v8::Array> arr = info[0].As<v8::Array>();
+        std::vector<IPlayer*> targets;
+        targets.reserve(arr->Length());
+
+        for(int i = 0; i < arr->Length(); ++i)
+        {
+            IPlayer* player;
+            v8::Local<v8::Value> ply;
+
+            bool toLocalSuccess = arr->Get(ctx, i).ToLocal(&ply);
+            V8_CHECK_NORETN(toLocalSuccess, "Invalid player in emitClientUnreliable players array");
+            if(!toLocalSuccess) continue;
+            V8Entity* v8Player = V8Entity::Get(ply);
+
+            bool isPlayerType = v8Player && v8Player->GetHandle() && v8Player->GetHandle()->GetType() == alt::IBaseObject::Type::PLAYER;
+            V8_CHECK_NORETN(isPlayerType, "player inside array expected");
+            if(!isPlayerType) continue;
+            targets.push_back(dynamic_cast<alt::IPlayer*>(v8Player->GetHandle()));
+        }
+
+        ICore::Instance().TriggerClientEventUnreliable(targets, eventName, mvArgs);
+    }
+    else
+    {
+        // if first argument is not null and not an array this event gets sent to the specific player
+        V8Entity* v8Player = V8Entity::Get(info[0]);
+        V8_CHECK(v8Player && v8Player->GetHandle() && v8Player->GetHandle()->GetType() == alt::IBaseObject::Type::PLAYER, "player or player array expected");
+
+        ICore::Instance().TriggerClientEventUnreliable(dynamic_cast<alt::IPlayer*>(v8Player->GetHandle()), eventName, mvArgs);
     }
 }
 
@@ -127,7 +165,7 @@ static void EmitAllClients(const v8::FunctionCallbackInfo<v8::Value>& info)
 
     MValueArgs args;
 
-    for(int i = 1; i < info.Length(); ++i) args.Push(V8Helpers::V8ToMValue(info[i], false));
+    for(int i = 1; i < info.Length(); ++i) args.emplace_back(V8Helpers::V8ToMValue(info[i], false));
 
     ICore::Instance().TriggerClientEventForAll(eventName, args);
 }
@@ -151,16 +189,7 @@ static void EmitClientRaw(const v8::FunctionCallbackInfo<v8::Value>& info)
             return;
         }
         V8_CHECK(!result.IsEmpty(), "Failed to serialize value");
-        mvArgs.Push(result);
-    }
-
-    if(info[0]->IsNull())
-    {
-        // Deprecation added: 06/08/2022 (version 13)
-        V8_DEPRECATE("emitClientRaw with null", "emitAllClientsRaw");
-        // if first argument is null this event gets send to every player
-        ICore::Instance().TriggerClientEventForAll(eventName, mvArgs);
-        return;
+        mvArgs.emplace_back(result);
     }
 
     if(info[0]->IsArray())
@@ -190,9 +219,9 @@ static void EmitClientRaw(const v8::FunctionCallbackInfo<v8::Value>& info)
     }
     else
     {
-        // if first argument is not null and not an array this event gets sent to the specific player
+        // if first argument is not an array this event gets sent to the specific player
         V8Entity* v8Player = V8Entity::Get(info[0]);
-        V8_CHECK(v8Player && v8Player->GetHandle() && v8Player->GetHandle()->GetType() == alt::IBaseObject::Type::PLAYER, "player or null expected");
+        V8_CHECK(v8Player && v8Player->GetHandle() && v8Player->GetHandle()->GetType() == alt::IBaseObject::Type::PLAYER, "player or player array expected");
 
         ICore::Instance().TriggerClientEvent(dynamic_cast<alt::IPlayer*>(v8Player->GetHandle()), eventName, mvArgs);
     }
@@ -216,10 +245,23 @@ static void EmitAllClientsRaw(const v8::FunctionCallbackInfo<v8::Value>& info)
             return;
         }
         V8_CHECK(!result.IsEmpty(), "Failed to serialize value");
-        args.Push(result);
+        args.emplace_back(result);
     }
 
     ICore::Instance().TriggerClientEventForAll(eventName, args);
+}
+
+static void EmitAllClientsUnreliable(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_CHECK_ARGS_LEN_MIN(1);
+    V8_ARG_TO_STRING(1, eventName);
+
+    MValueArgs args;
+
+    for(int i = 1; i < info.Length(); ++i) args.emplace_back(V8Helpers::V8ToMValue(info[i], false));
+
+    ICore::Instance().TriggerClientEventUnreliableForAll(eventName, args);
 }
 
 static void SetSyncedMeta(const v8::FunctionCallbackInfo<v8::Value>& info)
@@ -397,6 +439,10 @@ static void GetPedModelByHash(const v8::FunctionCallbackInfo<v8::Value>& info)
 
     infoObj->Set(ctx, V8Helpers::JSValue("hash"), V8Helpers::JSValue(modelInfo.hash));
     infoObj->Set(ctx, V8Helpers::JSValue("name"), V8Helpers::JSValue(modelInfo.name));
+    infoObj->Set(ctx, V8Helpers::JSValue("type"), V8Helpers::JSValue(modelInfo.type));
+    infoObj->Set(ctx, V8Helpers::JSValue("dlcName"), V8Helpers::JSValue(modelInfo.dlcName));
+    infoObj->Set(ctx, V8Helpers::JSValue("defaultUnarmedWeapon"), V8Helpers::JSValue(modelInfo.defaultUnarmedWeapon));
+    infoObj->Set(ctx, V8Helpers::JSValue("movementClipSet"), V8Helpers::JSValue(modelInfo.movementClipSet));
 
     size_t boneSize = std::size(modelInfo.bones);
     v8::Local<v8::Array> boneArr = v8::Array::New(isolate, boneSize);
@@ -423,8 +469,58 @@ static void SetWorldProfiler(const v8::FunctionCallbackInfo<v8::Value>& info)
     ICore::Instance().SetWorldProfiler(isActive);
 }
 
+static void GetEntitiesInDimension(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT_RESOURCE();
+
+    V8_CHECK_ARGS_LEN(2);
+    V8_ARG_TO_INT32(1, dimension);
+    V8_ARG_TO_UINT(2, allowedTypes);
+
+    auto entities = ICore::Instance().GetEntitiesInDimension(dimension, allowedTypes);
+    v8::Local<v8::Array> jsAll = v8::Array::New(isolate, entities.size());
+    for(uint32_t i = 0; i < entities.size(); ++i) jsAll->Set(resource->GetContext(), i, resource->GetBaseObjectOrNull(entities[i]));
+
+    V8_RETURN(jsAll);
+}
+
+static void GetEntitiesInRange(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT_RESOURCE();
+
+    V8_CHECK_ARGS_LEN(4);
+    V8_ARG_TO_VECTOR3(1, position);
+    V8_ARG_TO_INT32(2, range);
+    V8_ARG_TO_INT32(3, dimension);
+    V8_ARG_TO_UINT(4, allowedTypes);
+
+    auto entities = ICore::Instance().GetEntitiesInRange(position, range, dimension, allowedTypes);
+    v8::Local<v8::Array> jsAll = v8::Array::New(isolate, entities.size());
+    for(uint32_t i = 0; i < entities.size(); ++i) jsAll->Set(resource->GetContext(), i, resource->GetBaseObjectOrNull(entities[i]));
+
+    V8_RETURN(jsAll);
+}
+
+static void GetClosestEntities(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT_RESOURCE();
+
+    V8_CHECK_ARGS_LEN(5);
+    V8_ARG_TO_VECTOR3(1, position);
+    V8_ARG_TO_INT32(2, range);
+    V8_ARG_TO_INT32(3, dimension);
+    V8_ARG_TO_INT32(4, limit)
+    V8_ARG_TO_UINT(5, allowedTypes);
+
+    auto entities = ICore::Instance().GetClosestEntities(position, range, dimension, limit, allowedTypes);
+    v8::Local<v8::Array> jsAll = v8::Array::New(isolate, entities.size());
+    for(uint32_t i = 0; i < entities.size(); ++i) jsAll->Set(resource->GetContext(), i, resource->GetBaseObjectOrNull(entities[i]));
+
+    V8_RETURN(jsAll);
+}
+
 extern V8Class v8Player, v8Vehicle, v8Blip, v8AreaBlip, v8RadiusBlip, v8PointBlip, v8Checkpoint, v8VoiceChannel, v8Colshape, v8ColshapeCylinder, v8ColshapeSphere, v8ColshapeCircle,
-  v8ColshapeCuboid, v8ColshapeRectangle, v8ColshapePolygon;
+  v8ColshapeCuboid, v8ColshapeRectangle, v8ColshapePolygon, v8Ped, v8NetworkObject, v8VirtualEntity, v8VirtualEntityGroup, v8Marker;
 
 extern V8Module sharedModule;
 
@@ -445,7 +541,12 @@ extern V8Module v8Alt("alt",
                         v8ColshapeCircle,
                         v8ColshapeCuboid,
                         v8ColshapeRectangle,
-                        v8ColshapePolygon },
+                        v8ColshapePolygon,
+                        v8Ped,
+                        v8NetworkObject,
+                        v8VirtualEntityGroup,
+                        v8VirtualEntity,
+                        v8Marker },
                       [](v8::Local<v8::Context> ctx, v8::Local<v8::Object> exports)
                       {
                           v8::Isolate* isolate = ctx->GetIsolate();
@@ -461,6 +562,8 @@ extern V8Module v8Alt("alt",
                           V8Helpers::RegisterFunc(exports, "emitAllClients", &EmitAllClients);
                           V8Helpers::RegisterFunc(exports, "emitClientRaw", &EmitClientRaw);
                           V8Helpers::RegisterFunc(exports, "emitAllClientsRaw", &EmitAllClientsRaw);
+                          V8Helpers::RegisterFunc(exports, "emitClientUnreliable", &EmitClientUnreliable);
+                          V8Helpers::RegisterFunc(exports, "emitAllClientsUnreliable", &EmitAllClientsUnreliable);
 
                           V8Helpers::RegisterFunc(exports, "setSyncedMeta", &SetSyncedMeta);
                           V8Helpers::RegisterFunc(exports, "deleteSyncedMeta", &DeleteSyncedMeta);
@@ -479,6 +582,10 @@ extern V8Module v8Alt("alt",
                           V8Helpers::RegisterFunc(exports, "getServerConfig", &GetServerConfig);
 
                           V8Helpers::RegisterFunc(exports, "toggleWorldProfiler", &SetWorldProfiler);
+
+                          V8Helpers::RegisterFunc(exports, "getEntitiesInDimension", &GetEntitiesInDimension);
+                          V8Helpers::RegisterFunc(exports, "getEntitiesInRange", &GetEntitiesInRange);
+                          V8Helpers::RegisterFunc(exports, "getClosestEntities", &GetClosestEntities);
 
                           V8_OBJECT_SET_STRING(exports, "rootDir", alt::ICore::Instance().GetRootDirectory());
                           V8_OBJECT_SET_INT(exports, "defaultDimension", alt::DEFAULT_DIMENSION);

@@ -110,7 +110,18 @@ static void GiveWeapon(const v8::FunctionCallbackInfo<v8::Value>& info)
 
     V8_GET_THIS_BASE_OBJECT(_this, IPlayer);
 
-    V8_ARG_TO_UINT(1, weaponHash);
+    uint32_t weaponHash;
+    if(info[0]->IsString())
+    {
+        V8_ARG_TO_STRING(1, modelName);
+        weaponHash = alt::ICore::Instance().Hash(modelName);
+    }
+    else
+    {
+        V8_ARG_TO_UINT(1, _weaponHash);
+        weaponHash = _weaponHash;
+    }
+
     V8_ARG_TO_INT(2, ammo);
     V8_ARG_TO_BOOLEAN(3, equipNow);
 
@@ -399,6 +410,11 @@ static void AllGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo
     V8_RETURN(resource->GetAllPlayers());
 }
 
+static void CountGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    V8_RETURN_UINT(alt::ICore::Instance().GetPlayers().size());
+}
+
 static void StaticGetByID(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
@@ -429,6 +445,66 @@ static void PlayAmbientSpeech(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_ARG_TO_UINT(3, speechDictHash);
 
     player->PlayAmbientSpeech(speechName, speechParam, speechDictHash);
+}
+
+static void PlayAnimation(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_CHECK_ARGS_LEN_MIN_MAX(2, 10);
+    V8_GET_THIS_BASE_OBJECT(player, IPlayer);
+
+    V8_ARG_TO_STRING(1, animDict);
+    V8_ARG_TO_STRING(2, animName);
+    float blendInSpeed = 8.0f;
+    if(info.Length() > 2)
+    {
+        V8_ARG_TO_NUMBER(3, blendInSpeedVal);
+        blendInSpeed = blendInSpeedVal;
+    }
+    float blendOutSpeed = 8.0f;
+    if(info.Length() > 3)
+    {
+        V8_ARG_TO_NUMBER(4, blendOutSpeedVal);
+        blendOutSpeed = blendOutSpeedVal;
+    }
+    int duration = -1;
+    if(info.Length() > 4)
+    {
+        V8_ARG_TO_INT(5, durationVal);
+        duration = durationVal;
+    }
+    int flag = 0;
+    if(info.Length() > 5)
+    {
+        V8_ARG_TO_INT(6, flagVal);
+        flag = flagVal;
+    }
+    float playbackRate = 1.0f;
+    if(info.Length() > 6)
+    {
+        V8_ARG_TO_NUMBER(7, playbackRateVal);
+        playbackRate = playbackRateVal;
+    }
+    bool lockX = false;
+    if(info.Length() > 7)
+    {
+        V8_ARG_TO_BOOLEAN(8, lockXVal);
+        lockX = lockXVal;
+    }
+    bool lockY = false;
+    if(info.Length() > 8)
+    {
+        V8_ARG_TO_BOOLEAN(9, lockYVal);
+        lockY = lockYVal;
+    }
+    bool lockZ = false;
+    if(info.Length() > 9)
+    {
+        V8_ARG_TO_BOOLEAN(10, lockZVal);
+        lockZ = lockZVal;
+    }
+
+    player->PlayAnimation(animDict, animName, blendInSpeed, blendOutSpeed, duration, flag, playbackRate, lockX, lockY, lockZ);
 }
 
 static void SetHeadOverlay(const v8::FunctionCallbackInfo<v8::Value>& info)
@@ -684,7 +760,7 @@ static void Emit(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_ARG_TO_STRING(1, eventName);
 
     MValueArgs mvArgs;
-    for(int i = 1; i < info.Length(); ++i) mvArgs.Push(V8Helpers::V8ToMValue(info[i], false));
+    for(int i = 1; i < info.Length(); ++i) mvArgs.emplace_back(V8Helpers::V8ToMValue(info[i], false));
 
     alt::ICore::Instance().TriggerClientEvent(player, eventName, mvArgs);
 }
@@ -702,7 +778,7 @@ static void EmitRaw(const v8::FunctionCallbackInfo<v8::Value>& info)
     {
         alt::MValueByteArray result = V8Helpers::V8ToRawBytes(info[i]);
         V8_CHECK(!result.IsEmpty(), "Failed to serialize value");
-        mvArgs.Push(result);
+        mvArgs.emplace_back(result);
     }
 
     alt::ICore::Instance().TriggerClientEvent(player, eventName, mvArgs);
@@ -787,6 +863,7 @@ extern V8Class v8Player("Player",
 
                             V8Helpers::SetStaticMethod(isolate, tpl, "getByID", &StaticGetByID);
                             V8Helpers::SetStaticAccessor(isolate, tpl, "all", &AllGetter);
+                            V8Helpers::SetStaticAccessor(isolate, tpl, "count", &CountGetter);
 
                             V8Helpers::SetMethod(isolate, tpl, "emit", &Emit);
                             V8Helpers::SetMethod(isolate, tpl, "emitRaw", &EmitRaw);
@@ -822,6 +899,11 @@ extern V8Class v8Player("Player",
                             V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsSpawned>(isolate, tpl, "isSpawned");
                             V8Helpers::SetAccessor<IPlayer, float, &IPlayer::GetForwardSpeed>(isolate, tpl, "forwardSpeed");
                             V8Helpers::SetAccessor<IPlayer, float, &IPlayer::GetStrafeSpeed>(isolate, tpl, "strafeSpeed");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsEnteringVehicle>(isolate, tpl, "isEnteringVehicle");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsLeavingVehicle>(isolate, tpl, "isLeavingVehicle");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsOnLadder>(isolate, tpl, "isOnLadder");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsInMelee>(isolate, tpl, "isInMelee");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsInCover>(isolate, tpl, "isInCover");
 
                             V8Helpers::SetAccessor<IPlayer, uint32_t, &IPlayer::GetCurrentAnimationDict>(isolate, tpl, "currentAnimationDict");
                             V8Helpers::SetAccessor<IPlayer, uint32_t, &IPlayer::GetCurrentAnimationName>(isolate, tpl, "currentAnimationName");
@@ -836,9 +918,11 @@ extern V8Class v8Player("Player",
                             V8Helpers::SetAccessor(isolate, tpl, "socialID", &SocialIDGetter);
                             V8Helpers::SetAccessor(isolate, tpl, "hwidHash", &HwidHashGetter);
                             V8Helpers::SetAccessor(isolate, tpl, "hwidExHash", &HwidExHashGetter);
+                            V8Helpers::SetAccessor<IPlayer, std::string, &IPlayer::GetSocialClubName>(isolate, tpl, "socialClubName");
 
                             V8Helpers::SetAccessor<IPlayer, std::string, &IPlayer::GetAuthToken>(isolate, tpl, "authToken");
                             V8Helpers::SetAccessor(isolate, tpl, "discordID", &DiscordIDGetter);
+                            V8Helpers::SetAccessor<IPlayer, std::string, &IPlayer::GetCloudAuthHash>(isolate, tpl, "cloudAuthHash");
 
                             V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsFlashlightActive>(isolate, tpl, "flashlightActive");
 
@@ -879,6 +963,8 @@ extern V8Class v8Player("Player",
                             V8Helpers::SetMethod(isolate, tpl, "setIntoVehicle", &SetIntoVehicle);
 
                             V8Helpers::SetMethod(isolate, tpl, "playAmbientSpeech", &PlayAmbientSpeech);
+                            V8Helpers::SetMethod(isolate, tpl, "playAnimation", &PlayAnimation);
+                            V8Helpers::SetMethod<IPlayer, &IPlayer::ClearTasks>(isolate, tpl, "clearTasks");
 
                             V8Helpers::SetAccessor<IPlayer, uint32_t, &IPlayer::GetInteriorLocation>(isolate, tpl, "currentInterior");
                             V8Helpers::SetAccessor<IPlayer, uint32_t, &IPlayer::GetLastDamagedBodyPart, &IPlayer::SetLastDamagedBodyPart>(isolate, tpl, "lastDamagedBodyPart");

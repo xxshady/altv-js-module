@@ -15,6 +15,9 @@ inline void RegisterEvents()
     // Shared
     V8_REFERENCE_LOCAL_EVENT_HANDLER(consoleCommand);
     V8_REFERENCE_LOCAL_EVENT_HANDLER(animationChange);
+    V8_REFERENCE_LOCAL_EVENT_HANDLER(baseObjectCreate);
+    V8_REFERENCE_LOCAL_EVENT_HANDLER(baseObjectRemove);
+    V8_REFERENCE_EVENT_HANDLER(colshapeEvent);
 
     // Main
     V8_REFERENCE_EVENT_HANDLER(clientScriptEvent);
@@ -39,6 +42,8 @@ inline void RegisterEvents()
     V8_REFERENCE_LOCAL_EVENT_HANDLER(streamSyncedMetaChange);
     V8_REFERENCE_LOCAL_EVENT_HANDLER(globalSyncedMetaChange);
     V8_REFERENCE_LOCAL_EVENT_HANDLER(globalMetaChange);
+    V8_REFERENCE_LOCAL_EVENT_HANDLER(localMetaChange);
+    V8_REFERENCE_LOCAL_EVENT_HANDLER(metaChange);
 
     // Resource
     V8_REFERENCE_LOCAL_EVENT_HANDLER(anyResourceStart);
@@ -49,4 +54,7 @@ inline void RegisterEvents()
     V8_REFERENCE_LOCAL_EVENT_HANDLER(enteredVehicle);
     V8_REFERENCE_LOCAL_EVENT_HANDLER(leftVehicle);
     V8_REFERENCE_LOCAL_EVENT_HANDLER(changedVehicleSeat);
+
+    // World Object
+    V8_REFERENCE_LOCAL_EVENT_HANDLER(worldObjectPositionChange);
 }

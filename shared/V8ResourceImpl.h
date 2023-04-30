@@ -86,9 +86,7 @@ public:
 
         if(!anyHandlerRemoved)
         {
-            Log::Warning << 
-                location.ToString() << " alt.off was called for event \"" << ev << 
-                "\" with function reference that was not subscribed" << Log::Endl;
+            Log::Warning << location.ToString() << " alt.off was called for event \"" << ev << "\" with function reference that was not subscribed" << Log::Endl;
             return;
         }
 
@@ -188,10 +186,12 @@ public:
 
     v8::Local<v8::Value> CreateVector3(alt::Vector3f vec);
     v8::Local<v8::Value> CreateVector2(alt::Vector2f vec);
+    v8::Local<v8::Value> CreateQuaternion(alt::Quaternion quat);
     v8::Local<v8::Value> CreateRGBA(alt::RGBA rgba);
 
     bool IsVector3(v8::Local<v8::Value> val);
     bool IsVector2(v8::Local<v8::Value> val);
+    bool IsQuaternion(v8::Local<v8::Value> val);
     bool IsRGBA(v8::Local<v8::Value> val);
     bool IsBaseObject(v8::Local<v8::Value> val);
 
@@ -244,9 +244,16 @@ public:
     v8::Local<v8::Array> GetAllPlayers();
     v8::Local<v8::Array> GetAllVehicles();
     v8::Local<v8::Array> GetAllBlips();
+    v8::Local<v8::Array> GetAllCheckpoints();
+    v8::Local<v8::Array> GetAllVirtualEntityGroups();
+    v8::Local<v8::Array> GetAllVirtualEntities();
+    v8::Local<v8::Array> GetAllPeds();
+    v8::Local<v8::Array> GetAllMarkers();
+    v8::Local<v8::Array> GetAllColshapes();
 #ifdef ALT_CLIENT_API
     v8::Local<v8::Array> GetAllObjects();
 #endif
+    v8::Local<v8::Array> GetAllNetworkObjects();
 
     std::vector<V8Helpers::EventCallback*> GetLocalHandlers(const std::string& name);
     std::vector<V8Helpers::EventCallback*> GetRemoteHandlers(const std::string& name);
@@ -331,6 +338,7 @@ protected:
 
     V8Helpers::CPersistent<v8::Function> vector3Class;
     V8Helpers::CPersistent<v8::Function> vector2Class;
+    V8Helpers::CPersistent<v8::Function> quaternionClass;
     V8Helpers::CPersistent<v8::Function> rgbaClass;
     V8Helpers::CPersistent<v8::Function> baseObjectClass;
 

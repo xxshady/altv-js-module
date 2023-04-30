@@ -18,7 +18,7 @@ static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
     V8_CHECK_CONSTRUCTOR();
-    V8_CHECK_ARGS_LEN_MIN_MAX(3, 5);
+    V8_CHECK_ARGS_LEN_MIN_MAX(3, 7);
 
     uint32_t modelHash;
     if(info[0]->IsString())
@@ -35,8 +35,10 @@ static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_ARG_TO_VECTOR3(3, rot);
     V8_ARG_TO_BOOLEAN_OPT(4, noOffset, false);
     V8_ARG_TO_BOOLEAN_OPT(5, dynamic, false);
+    V8_ARG_TO_BOOLEAN_OPT(6, useStreaming, false);
+    V8_ARG_TO_UINT_OPT(7, streamingDistance, 0);
 
-    auto obj = alt::ICore::Instance().CreateObject(modelHash, pos, rot, noOffset, dynamic);
+    auto obj = alt::ICore::Instance().CreateObject(modelHash, pos, rot, noOffset, dynamic, useStreaming, streamingDistance, resource->GetResource());
     V8_BIND_BASE_OBJECT(obj, "Failed to create object");
 }
 
@@ -83,7 +85,7 @@ static void AttachToEntity(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_ARG_TO_BOOLEAN_OPT(6, collision, false);
     V8_ARG_TO_BOOLEAN_OPT(7, fixedRot, false);
 
-    if (info[0]->IsUint32())
+    if(info[0]->IsUint32())
     {
         V8_ARG_TO_INT(1, scriptId);
         object->AttachToEntity(scriptId, bone, pos, rot, useSoftPinning, collision, fixedRot);
@@ -116,21 +118,15 @@ static void ToggleCollision(const v8::FunctionCallbackInfo<v8::Value>& info)
     object->ToggleCollision(toggle, keepPhysics);
 }
 
-static void SetPositionFrozen(const v8::FunctionCallbackInfo<v8::Value>& info)
-{
-    V8_GET_ISOLATE_CONTEXT_RESOURCE();
-    V8_GET_THIS_BASE_OBJECT(object, alt::IObject);
-    V8_CHECK_ARGS_LEN(1);
-
-    V8_ARG_TO_BOOLEAN(1, toggle);
-
-    object->SetPositionFrozen(toggle);
-}
-
 static void AllGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
     V8_RETURN(resource->GetAllObjects());
+}
+
+static void CountGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    V8_RETURN_UINT(alt::ICore::Instance().GetObjects().size());
 }
 
 static void AllWorldGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
@@ -154,6 +150,7 @@ extern V8Class v8Object("Object",
                             V8Helpers::SetMethod(isolate, tpl, "toString", ToString);
 
                             V8Helpers::SetStaticAccessor(isolate, tpl, "all", &AllGetter);
+                            V8Helpers::SetStaticAccessor(isolate, tpl, "count", &CountGetter);
 
                             V8Helpers::SetStaticAccessor(isolate, tpl, "allWorld", &AllWorldGetter);
 
@@ -177,11 +174,16 @@ extern V8Class v8Object("Object",
 
                             V8Helpers::SetMethod<IObject, &IObject::PlaceOnGroundProperly>(isolate, tpl, "placeOnGroundProperly");
 
-                            V8Helpers::SetMethod(isolate, tpl, "setPositionFrozen", &SetPositionFrozen);
+                            V8Helpers::SetAccessor<IObject, bool, &IObject::IsPositionFrozen, &IObject::SetPositionFrozen>(isolate, tpl, "positionFrozen");
 
                             V8Helpers::SetMethod<IObject, &IObject::ActivatePhysics>(isolate, tpl, "activatePhysics");
 
                             V8Helpers::SetAccessor<IObject, uint8_t, &IObject::GetTextureVariation, &IObject::SetTextureVariation>(isolate, tpl, "textureVariation");
 
                             V8Helpers::SetAccessor<IObject, bool, &IObject::IsWorldObject>(isolate, tpl, "isWorldObject");
+
+                            V8Helpers::SetAccessor<IObject, bool, &IObject::IsStreamedIn>(isolate, tpl, "isStreamedIn");
+
+                            V8Helpers::SetAccessor<IObject, uint32_t, &IObject::GetStreamingDistance>(isolate, tpl, "streamingDistance");
+                            V8Helpers::SetAccessor<IObject, bool, &IObject::IsVisible, &IObject::SetVisible>(isolate, tpl, "visible");
                         });

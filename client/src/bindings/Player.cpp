@@ -65,6 +65,11 @@ static void AllGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo
     V8_RETURN(resource->GetAllPlayers()->Clone());
 }
 
+static void CountGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    V8_RETURN_UINT(alt::ICore::Instance().GetPlayers().size());
+}
+
 static void StreamedInGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
@@ -93,7 +98,16 @@ static void StaticGetByScriptID(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
     V8_CHECK_ARGS_LEN(1);
     V8_ARG_TO_INT(1, scriptGuid);
-    V8_RETURN_BASE_OBJECT(alt::ICore::Instance().GetEntityByScriptGuid(scriptGuid));
+    alt::IEntity* entity = alt::ICore::Instance().GetEntityByScriptGuid(scriptGuid);
+
+    if(entity && (entity->GetType() == alt::IEntity::Type::PLAYER || entity->GetType() == alt::IEntity::Type::LOCAL_PLAYER))
+    {
+        V8_RETURN_BASE_OBJECT(entity);
+    }
+    else
+    {
+        V8_RETURN_NULL();
+    }
 }
 
 static void StaticGetByID(const v8::FunctionCallbackInfo<v8::Value>& info)
@@ -128,6 +142,8 @@ extern V8Class v8Player("Player",
                             V8Helpers::SetStaticMethod(isolate, tpl, "getByScriptID", StaticGetByScriptID);
 
                             V8Helpers::SetStaticAccessor(isolate, tpl, "all", &AllGetter);
+                            V8Helpers::SetStaticAccessor(isolate, tpl, "count", &CountGetter);
+
                             V8Helpers::SetStaticAccessor(isolate, tpl, "streamedIn", &StreamedInGetter);
                             V8Helpers::SetStaticAccessor(isolate, tpl, "local", &LocalGetter);
 
@@ -164,6 +180,11 @@ extern V8Class v8Player("Player",
                             V8Helpers::SetAccessor<IPlayer, Rotation, &IPlayer::GetHeadRotation>(isolate, tpl, "headRot");
                             V8Helpers::SetAccessor<IPlayer, float, &IPlayer::GetForwardSpeed>(isolate, tpl, "forwardSpeed");
                             V8Helpers::SetAccessor<IPlayer, float, &IPlayer::GetStrafeSpeed>(isolate, tpl, "strafeSpeed");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsEnteringVehicle>(isolate, tpl, "isEnteringVehicle");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsLeavingVehicle>(isolate, tpl, "isLeavingVehicle");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsOnLadder>(isolate, tpl, "isOnLadder");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsInMelee>(isolate, tpl, "isInMelee");
+                            V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsInCover>(isolate, tpl, "isInCover");
 
                             // V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsSuperJumpEnabled>(isolate, tpl, "isSuperJumpEnabled");
                             // V8Helpers::SetAccessor<IPlayer, bool, &IPlayer::IsCrouching>(isolate, tpl, "isCrouching");

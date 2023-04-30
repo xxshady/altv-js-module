@@ -12,7 +12,7 @@ CV8ScriptRuntime::CV8ScriptRuntime()
     v8::V8::SetFlagsFromString("--harmony-import-assertions --short-builtin-calls --no-lazy --no-flush-bytecode");
     platform = v8::platform::NewDefaultPlatform();
     v8::V8::InitializePlatform(platform.get());
-    v8::V8::InitializeICU((alt::ICore::Instance().GetClientPath() + "/libs/icudtl.dat").c_str());
+    v8::V8::InitializeICU((alt::ICore::Instance().GetClientPath() + "/libs/icudtl_v8.dat").c_str());
     v8::V8::Initialize();
 
     create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
@@ -245,9 +245,10 @@ void CV8ScriptRuntime::OnDispose()
     delete this;
 }
 
-void CV8ScriptRuntime::Init()
+void CV8ScriptRuntime::Init(std::function<void(bool success, std::string error)> next, std::function<void(alt::InitState state, float progress, float total)> setProgress)
 {
     IRuntimeEventHandler::Reset();
+    next(true, "");
 }
 
 static std::string Base64Decode(const std::string& in)
@@ -319,12 +320,12 @@ v8::MaybeLocal<v8::Module>
               {
                   // Handle as base64 source string
                   std::string sourceStr = Base64Decode(specifierStr);
-                  maybeModule = static_cast<CV8ResourceImpl*>(resource)->ResolveCode(sourceStr, V8Helpers::SourceLocation::GetCurrent(isolate, resource));
+                  maybeModule = static_cast<CV8ResourceImpl*>(resource)->ResolveCode("", sourceStr, V8Helpers::SourceLocation::GetCurrent(isolate, resource));
               }
               else if(typeValueStr == "source")
               {
                   // Handle as module source code
-                  maybeModule = static_cast<CV8ResourceImpl*>(resource)->ResolveCode(specifierStr, V8Helpers::SourceLocation::GetCurrent(isolate, resource));
+                  maybeModule = static_cast<CV8ResourceImpl*>(resource)->ResolveCode("", specifierStr, V8Helpers::SourceLocation::GetCurrent(isolate, resource));
               }
               else if(typeValueStr == "json")
               {

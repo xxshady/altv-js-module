@@ -72,7 +72,7 @@ static void Emit(const v8::FunctionCallbackInfo<v8::Value>& info)
 
     alt::MValueArgs mvArgs;
 
-    for(int i = 1; i < info.Length(); ++i) mvArgs.Push(V8Helpers::V8ToMValue(info[i], false));
+    for(int i = 1; i < info.Length(); ++i) mvArgs.emplace_back(V8Helpers::V8ToMValue(info[i], false));
 
     view->Trigger(evName, mvArgs);
 }
@@ -143,7 +143,7 @@ static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
         V8_OBJECT_GET_INT(size, "x", sizeX);
         V8_OBJECT_GET_INT(size, "y", sizeY);
 
-        view = alt::ICore::Instance().CreateWebView(altres, url, { posX, posY }, { sizeX, sizeY }, true, isOverlayBool);
+        view = alt::ICore::Instance().CreateWebView(url, { posX, posY }, { sizeX, sizeY }, true, isOverlayBool, altres);
     }
     else if(info.Length() == 3 && info[2]->IsObject())
     {
@@ -156,7 +156,7 @@ static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
         V8_OBJECT_GET_INT(size, "x", sizeX);
         V8_OBJECT_GET_INT(size, "y", sizeY);
 
-        view = alt::ICore::Instance().CreateWebView(altres, url, { posX, posY }, { sizeX, sizeY }, true, false);
+        view = alt::ICore::Instance().CreateWebView(url, { posX, posY }, { sizeX, sizeY }, true, false, altres);
     }
     else if(info.Length() == 3)
     {
@@ -166,7 +166,7 @@ static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
         auto texture = alt::ICore::Instance().GetTextureFromDrawable(drawableHash, targetTextureStr);
         V8_CHECK(texture != nullptr, "Texture not found");
 
-        view = alt::ICore::Instance().CreateWebView(altres, url, (uint32_t)drawableHash, targetTextureStr);
+        view = alt::ICore::Instance().CreateWebView(url, (uint32_t)drawableHash, targetTextureStr, altres);
         V8_CHECK(view, "Interactive WebView cannot be created");
     }
     else if(info.Length() == 2 && info[1]->IsObject())
@@ -176,17 +176,17 @@ static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
         V8_OBJECT_GET_INT(pos, "x", posX);
         V8_OBJECT_GET_INT(pos, "y", posY);
 
-        view = alt::ICore::Instance().CreateWebView(altres, url, { posX, posY }, { 0, 0 }, true, false);
+        view = alt::ICore::Instance().CreateWebView(url, { posX, posY }, { 0, 0 }, true, false, altres);
     }
     else if(info.Length() == 2)
     {
         V8_ARG_TO_BOOLEAN(2, isOverlayBool);
 
-        view = alt::ICore::Instance().CreateWebView(altres, url, { 0, 0 }, { 0, 0 }, true, isOverlayBool);
+        view = alt::ICore::Instance().CreateWebView(url, { 0, 0 }, { 0, 0 }, true, isOverlayBool, altres);
     }
     else
     {
-        view = alt::ICore::Instance().CreateWebView(altres, url, { 0, 0 }, { 0, 0 }, true, false);
+        view = alt::ICore::Instance().CreateWebView(url, { 0, 0 }, { 0, 0 }, true, false, altres);
     }
 
     V8_BIND_BASE_OBJECT(view, "Failed to create WebView");
@@ -217,6 +217,39 @@ static void SetZoomLevel(const v8::FunctionCallbackInfo<v8::Value>& info)
     view->SetZoomLevel(zoomLevel);
 }
 
+static void AllWebviewGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT_RESOURCE();
+    auto objects = alt::ICore::Instance().GetWebViews();
+    v8::Local<v8::Array> jsArr = v8::Array::New(isolate, objects.size());
+    for(size_t i = 0; i < objects.size(); ++i) jsArr->Set(ctx, i, resource->GetBaseObjectOrNull(objects[i]));
+    V8_RETURN(jsArr);
+}
+
+static void WebviewCountGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    V8_RETURN_UINT(alt::ICore::Instance().GetWebViews().size());
+}
+
+static void StaticGetByID(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT_RESOURCE();
+    V8_CHECK_ARGS_LEN(1);
+
+    V8_ARG_TO_INT(1, id);
+
+    alt::IBaseObject* baseObject = alt::ICore::Instance().GetBaseObjectByID(alt::IBaseObject::Type::WEBVIEW, id);
+
+    if(baseObject && baseObject->GetType() == alt::IEntity::Type::WEBVIEW)
+    {
+        V8_RETURN_BASE_OBJECT(baseObject);
+    }
+    else
+    {
+        V8_RETURN_NULL();
+    }
+}
+
 extern V8Class v8BaseObject;
 extern V8Class v8WebView("WebView",
                          v8BaseObject,
@@ -225,8 +258,12 @@ extern V8Class v8WebView("WebView",
                          {
                              v8::Isolate* isolate = v8::Isolate::GetCurrent();
 
+                             V8Helpers::SetStaticAccessor(isolate, tpl, "all", &AllWebviewGetter);
+                             V8Helpers::SetStaticAccessor(isolate, tpl, "count", &WebviewCountGetter);
+                             V8Helpers::SetStaticMethod(isolate, tpl, "getByID", StaticGetByID);
                              V8Helpers::SetMethod(isolate, tpl, "toString", ToString);
 
+                             V8Helpers::SetAccessor<IWebView, uint32_t, &IWebView::GetID>(isolate, tpl, "id");
                              V8Helpers::SetAccessor<IWebView, bool, &IWebView::IsVisible, &IWebView::SetVisible>(isolate, tpl, "isVisible");
                              V8Helpers::SetAccessor<IWebView, const std::string&, &IWebView::GetUrl, &IWebView::SetUrl>(isolate, tpl, "url");
                              V8Helpers::SetAccessor<IWebView, bool, &IWebView::IsOverlay>(isolate, tpl, "isOverlay");
