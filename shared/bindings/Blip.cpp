@@ -199,7 +199,7 @@ static void AllGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo
 {
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
 
-    V8_RETURN(resource->GetAllBlips()->Clone());
+    V8_RETURN(resource->GetAllBlips());
 }
 
 static void CountGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)

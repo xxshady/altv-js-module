@@ -36,7 +36,7 @@ static void AllGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo
 {
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
 
-    V8_RETURN(resource->GetAllColshapes()->Clone());
+    V8_RETURN(resource->GetAllColshapes());
 }
 
 static void StaticGetByID(const v8::FunctionCallbackInfo<v8::Value>& info)

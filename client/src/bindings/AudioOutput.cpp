@@ -19,7 +19,7 @@ static void AllAudioOutputGetter(v8::Local<v8::String> name, const v8::PropertyC
 {
     V8_GET_ISOLATE_CONTEXT_RESOURCE();
 
-    V8_RETURN(resource->GetAllAudioOutputs()->Clone());
+    V8_RETURN(resource->GetAllAudioOutputs());
 }
 
 static void AudioOutputCountGetter(v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
