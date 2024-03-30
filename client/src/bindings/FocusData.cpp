@@ -34,7 +34,7 @@ static void OverrideFocus(const v8::FunctionCallbackInfo<v8::Value>& info)
 
     auto cls = V8Class::ObjectClass::NONE;
     if(info[0]->IsObject())
-        V8Helpers::GetObjectClass(info[0].As<v8::Object>());
+        cls = V8Helpers::GetObjectClass(info[0].As<v8::Object>());
 
     if(cls == V8Class::ObjectClass::VECTOR3)
     {
