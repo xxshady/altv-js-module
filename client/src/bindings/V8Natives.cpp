@@ -47,11 +47,12 @@ static void* ToMemoryBuffer(v8::Local<v8::Value> val, v8::Local<v8::Context> ctx
     if(val->IsObject())
     {
         v8::Local<v8::Object> obj = val.As<v8::Object>();
+        auto cls = V8Helpers::GetObjectClass(obj);
 
-        if(obj->InternalFieldCount() == 2)
+        if(cls == V8Class::ObjectClass::MEMORY_BUFFER)
         {
-            void* memory = obj->GetAlignedPointerFromInternalField(0);
-            uint32_t size = obj->GetInternalField(0)->Uint32Value(ctx).ToChecked();
+            void* memory = obj->GetAlignedPointerFromInternalField(1);
+            uint32_t size = obj->GetInternalField(2)->Uint32Value(ctx).ToChecked();
 
             if(size > 0) return memory;
         }
