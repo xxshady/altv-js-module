@@ -385,7 +385,11 @@ V8Class::ObjectClass V8Helpers::GetObjectClass(v8::Local<v8::Object> obj)
     if(obj->InternalFieldCount() <= static_cast<int>(V8Class::InternalFields::OBJECT_CLASS))
         return V8Class::ObjectClass::NONE;
 
-    void* cls = obj->GetInternalField(static_cast<int>(V8Class::InternalFields::OBJECT_CLASS)).As<v8::External>()->Value();
+    auto val = obj->GetInternalField(static_cast<int>(V8Class::InternalFields::OBJECT_CLASS));
+    if(!val->IsExternal())
+        return V8Class::ObjectClass::NONE;
+
+    void* cls = val.As<v8::External>()->Value();
     return *reinterpret_cast<V8Class::ObjectClass*>(&cls);
 }
 
