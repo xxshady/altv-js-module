@@ -70,6 +70,25 @@ static void StaticGetByScriptID(const v8::FunctionCallbackInfo<v8::Value>& info)
     }
 }
 
+static void StaticGetByRemoteId(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT_RESOURCE();
+    V8_CHECK_ARGS_LEN(1);
+
+    V8_ARG_TO_INT32(1, id);
+
+    alt::IBaseObject* entity = alt::ICore::Instance().GetBaseObjectByRemoteID(alt::IBaseObject::Type::PED, id);
+
+    if(entity)
+    {
+        V8_RETURN_BASE_OBJECT(entity);
+    }
+    else
+    {
+        V8_RETURN_NULL();
+    }
+}
+
 // clang-format off
 extern V8Class v8Entity;
 extern V8Class v8Ped("Ped", v8Entity, [](v8::Local<v8::FunctionTemplate> tpl)
@@ -81,6 +100,7 @@ extern V8Class v8Ped("Ped", v8Entity, [](v8::Local<v8::FunctionTemplate> tpl)
     V8Helpers::SetStaticAccessor(isolate, tpl, "streamedIn", &StreamedInGetter);
     V8Helpers::SetStaticMethod(isolate, tpl, "getByID", StaticGetByID);
     V8Helpers::SetStaticMethod(isolate, tpl, "getByScriptID", StaticGetByScriptID);
+    V8Helpers::SetStaticMethod(isolate, tpl, "getByRemoteID", StaticGetByRemoteId);
 
     V8Helpers::SetAccessor<IPed, uint32_t, &IPed::GetCurrentWeapon>(isolate, tpl, "currentWeapon");
     V8Helpers::SetAccessor<IPed, uint16_t, &IPed::GetHealth>(isolate, tpl, "health");
