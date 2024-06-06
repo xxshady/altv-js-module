@@ -30,6 +30,7 @@ static void GetForHandlingName(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_RETURN(v8HandlingData.New(isolate->GetEnteredOrMicrotaskContext(), args));
 }
 
+/*
 static void ReloadVehiclePhysics(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT();
@@ -39,6 +40,7 @@ static void ReloadVehiclePhysics(const v8::FunctionCallbackInfo<v8::Value>& info
 
     V8_RETURN_BOOLEAN(alt::ICore::Instance().ReloadVehiclePhysics(modelHash));
 }
+*/
 
 static void HandlingNameHashGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
@@ -1746,7 +1748,7 @@ extern V8Class v8HandlingData("HandlingData", Constructor, [](v8::Local<v8::Func
     tpl->InstanceTemplate()->SetInternalFieldCount(static_cast<int>(V8Class::InternalFields::COUNT));
 
     V8Helpers::SetStaticMethod(isolate, tpl, "getForHandlingName", &GetForHandlingName);
-    V8Helpers::SetStaticMethod(isolate, tpl, "reloadVehiclePhysics", &ReloadVehiclePhysics);
+    // V8Helpers::SetStaticMethod(isolate, tpl, "reloadVehiclePhysics", &ReloadVehiclePhysics);
 
     V8Helpers::SetAccessor(isolate, tpl, "handlingNameHash", &HandlingNameHashGetter);
     V8Helpers::SetAccessor(isolate, tpl, "mass", &MassGetter, &MassSetter);
