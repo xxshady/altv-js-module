@@ -466,9 +466,10 @@ static void GetNetTime(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_RETURN_UINT(netTime);
 }
 
-static v8::MaybeLocal<v8::Module> HandlePreBootstrapImport(v8::Local<v8::Context> context, v8::Local<v8::String> specifier, v8::Local<v8::FixedArray>, v8::Local<v8::Module> referrer) {
+// Enums module doesn't need to import any modules
+static v8::MaybeLocal<v8::Module> HandleEnumsModuleImport(v8::Local<v8::Context> context, v8::Local<v8::String> specifier, v8::Local<v8::FixedArray>, v8::Local<v8::Module> referrer) {
     v8::MaybeLocal<v8::Module> maybeModule;
-    Log::Error << "HandlePreBootstrapImport" << Log::Endl;
+    Log::Error << "Enums module must not import anything" << Log::Endl;
     return maybeModule;
 }
 
@@ -485,7 +486,7 @@ static void AddEnumsToSharedModuleExports(v8::Isolate* isolate, v8::Local<v8::Co
     }
 
     auto mod = maybeModule.ToLocalChecked();
-    v8::Maybe<bool> result = mod->InstantiateModule(ctx, HandlePreBootstrapImport);
+    v8::Maybe<bool> result = mod->InstantiateModule(ctx, HandleEnumsModuleImport);
     if(result.IsNothing() || result.ToChecked() == false)
     {
         Log::Error << "Failed to instantiate js-enums module" << Log::Endl;
