@@ -4,6 +4,7 @@ include(../shared/deps/cpp-sdk/CMakeLists.txt)
 include(cmake/DepsDownload.cmake)
 set(BINDINGS_SCOPE "SERVER")
 include(../shared/cmake/GenerateBindings.cmake)
+include(../shared/cmake/GenerateEnums.cmake)
 
 project(js-module)
 
@@ -145,6 +146,7 @@ add_library(
 )
 
 add_dependencies(${PROJECT_NAME} alt-sdk js-bindings)
+add_dependencies(${PROJECT_NAME} alt-sdk js-enums)
 
 if(MSVC AND WIN32)
     set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG")

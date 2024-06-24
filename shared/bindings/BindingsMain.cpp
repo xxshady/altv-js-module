@@ -3,6 +3,7 @@
 #include "../V8Helpers.h"
 #include "../V8ResourceImpl.h"
 #include "../V8Module.h"
+#include "JSEnums.h"
 
 static void HashCb(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
@@ -465,6 +466,54 @@ static void GetNetTime(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_RETURN_UINT(netTime);
 }
 
+static v8::MaybeLocal<v8::Module> HandlePreBootstrapImport(v8::Local<v8::Context> context, v8::Local<v8::String> specifier, v8::Local<v8::FixedArray>, v8::Local<v8::Module> referrer) {
+    v8::MaybeLocal<v8::Module> maybeModule;
+    Log::Error << "HandlePreBootstrapImport" << Log::Endl;
+    return maybeModule;
+}
+
+static void AddEnumsToSharedModuleExports(v8::Isolate* isolate, v8::Local<v8::Context> ctx, v8::Local<v8::Object> exports) {
+    v8::Local<v8::String> sourceCode = V8Helpers::JSValue(JSEnums::GetBindingsCode());
+
+    v8::ScriptOrigin scriptOrigin(isolate, V8Helpers::JSValue("js-enums"), 0, 0, false, -1, v8::Local<v8::Value>(), false, false, true, v8::Local<v8::PrimitiveArray>());
+
+    v8::ScriptCompiler::Source source{ sourceCode, scriptOrigin };
+    auto maybeModule = v8::ScriptCompiler::CompileModule(isolate, &source);
+    if (maybeModule.IsEmpty()) {
+        Log::Error << "Failed to compile js-enums module" << Log::Endl;
+        return;
+    }
+
+    auto mod = maybeModule.ToLocalChecked();
+    v8::Maybe<bool> result = mod->InstantiateModule(ctx, HandlePreBootstrapImport);
+    if(result.IsNothing() || result.ToChecked() == false)
+    {
+        Log::Error << "Failed to instantiate js-enums module" << Log::Endl;
+        return;
+    }
+
+    auto returnValue = mod->Evaluate(ctx);
+    if(returnValue.IsEmpty())
+    {
+        Log::Error << "Failed to evaluate js-enums module" << Log::Endl;
+        return;
+    }
+
+    auto enumsNamespace = mod->GetModuleNamespace();
+    auto enums = enumsNamespace.As<v8::Object>();
+    v8::Local<v8::Array> keys;
+    enums->GetOwnPropertyNames(ctx).ToLocal(&keys);
+
+    for(uint32_t i = 0; i < keys->Length(); ++i)
+    {
+        v8::Local<v8::Value> key;
+        keys->Get(ctx, i).ToLocal(&key);
+        v8::Local<v8::Value> value;
+        enums->Get(ctx, key).ToLocal(&value);
+        exports->Set(ctx, key, value);
+    }
+}
+
 extern V8Class v8BaseObject, v8WorldObject, v8Entity, v8File, v8RGBA, v8Vector2, v8Vector3, v8Quaternion, v8Blip, v8AreaBlip, v8RadiusBlip, v8PointBlip, v8Resource, v8Utils;
 
 extern V8Module
@@ -530,6 +579,8 @@ extern V8Module
 
                    V8_OBJECT_SET_INT(exports, "defaultDimension", alt::DEFAULT_DIMENSION);
                    V8_OBJECT_SET_INT(exports, "globalDimension", alt::GLOBAL_DIMENSION);
+
+                   AddEnumsToSharedModuleExports(isolate, ctx, exports);
 
 #ifdef ALT_CLIENT_API
                    V8_OBJECT_SET_BOOLEAN(exports, "isClient", true);

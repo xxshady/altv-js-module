@@ -1,5 +1,6 @@
 # Generated
 *.gen
 shared/JSBindings.h
+shared/JSEnums.h
 
 node_modules/
