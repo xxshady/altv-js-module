@@ -3,6 +3,7 @@ include(FetchContent)
 include(cmake/DepsDownload.cmake)
 set(BINDINGS_SCOPE "CLIENT")
 include(../shared/cmake/GenerateBindings.cmake)
+include(../shared/cmake/GenerateEnums.cmake)
 
 project(altv-client-js)
 
@@ -112,6 +113,7 @@ if(DYNAMIC_BUILD EQUAL 1)
   )
 
   add_dependencies(${PROJECT_NAME} ${SDK_PROJECT_NAME} js-bindings)
+  add_dependencies(${PROJECT_NAME} ${SDK_PROJECT_NAME} js-enums)
 else()
   ## STATIC
   add_library(
@@ -130,6 +132,7 @@ else()
   )
 
   add_dependencies(${PROJECT_NAME}-static js-bindings)
+  add_dependencies(${PROJECT_NAME}-static js-enums)
 endif()
 
 if(ALTV_JS_DEINIT_CPPSDK)
