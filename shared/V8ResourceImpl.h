@@ -181,7 +181,7 @@ public:
     template<class T>
     v8::Local<v8::Value> GetBaseObjectOrNull(const T*& handle)
     {
-        return GetBaseObjectOrNull(handle.Get());
+        return GetBaseObjectOrNull(handle->Get());
     }
 
     v8::Local<v8::Value> CreateVector3(alt::Vector3f vec);
