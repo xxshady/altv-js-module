@@ -67,7 +67,7 @@ bool CNodeResourceImpl::Start()
     std::vector<std::string> args{ resource->GetName() };
     std::vector<std::string> execArgs{ };
 
-    env = node::CreateEnvironment(nodeData, _context, args, execArgs, flags, threadId, std::move(inspector));        
+    env = node::CreateEnvironment(nodeData, _context, args, execArgs, flags, threadId, std::move(inspector));
     node::LoadEnvironment(env, bootstrap_code);
 
     // Not sure it's needed anymore
@@ -171,7 +171,17 @@ void CNodeResourceImpl::OnEvent(const alt::CEvent* e)
         auto ev = static_cast<const alt::CPlayerDisconnectEvent*>(e);
         auto player = ev->GetTarget();
 
-        remoteRPCHandlers.erase(player);
+        if (remoteRPCHandlers[player].size() > 0)
+        {
+            for (const auto rpcHandler : remoteRPCHandlers[player])
+            {
+                const auto promise = rpcHandler.PromiseResolver.Get(GetIsolate());
+                if (promise->IsPromise())
+                    promise->Reject(GetContext(), V8Helpers::JSValue("Player disconnected"));
+            }
+
+            remoteRPCHandlers.erase(player);
+        }
 
         for (auto it = awaitableRPCHandlers.rbegin(); it != awaitableRPCHandlers.rend(); ++it)
         {
