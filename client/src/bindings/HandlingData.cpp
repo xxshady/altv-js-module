@@ -320,7 +320,7 @@ static void DriveBiasFrontSetter(v8::Local<v8::String>, v8::Local<v8::Value> val
     handling->SetDriveBiasFront(fvalue);
 }
 
-static void AccelerationGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
+static void DriveBiasRearGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT();
 
@@ -329,10 +329,10 @@ static void AccelerationGetter(v8::Local<v8::String>, const v8::PropertyCallback
     auto handling = alt::ICore::Instance().GetHandlingData(modelHash);
     V8_CHECK(handling, "handling data for vehicle not found");
 
-    V8_RETURN_NUMBER(handling->GetAcceleration());
+    V8_RETURN_NUMBER(handling->GetDriveBiasRear());
 }
 
-static void AccelerationSetter(v8::Local<v8::String>, v8::Local<v8::Value> val, const v8::PropertyCallbackInfo<void>& info)
+static void DriveBiasRearSetter(v8::Local<v8::String>, v8::Local<v8::Value> val, const v8::PropertyCallbackInfo<void>& info)
 {
     V8_GET_ISOLATE_CONTEXT();
 
@@ -343,7 +343,37 @@ static void AccelerationSetter(v8::Local<v8::String>, v8::Local<v8::Value> val, 
 
     V8_TO_NUMBER(val, fvalue);
 
-    handling->SetAcceleration(fvalue);
+    handling->SetDriveBiasRear(fvalue);
+}
+
+static void AccelerationGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    V8_DEPRECATE("HandlingData.acceleration", "HandlingData.driveBiasRear");
+
+    V8_GET_ISOLATE_CONTEXT();
+
+    V8_GET_THIS_INTERNAL_FIELD_INTEGER(1, modelHash);
+
+    auto handling = alt::ICore::Instance().GetHandlingData(modelHash);
+    V8_CHECK(handling, "handling data for vehicle not found");
+
+    V8_RETURN_NUMBER(handling->GetDriveBiasRear());
+}
+
+static void AccelerationSetter(v8::Local<v8::String>, v8::Local<v8::Value> val, const v8::PropertyCallbackInfo<void>& info)
+{
+    V8_DEPRECATE("HandlingData.acceleration", "HandlingData.driveBiasRear");
+
+    V8_GET_ISOLATE_CONTEXT();
+
+    V8_GET_THIS_INTERNAL_FIELD_INTEGER(1, modelHash);
+
+    auto handling = alt::ICore::Instance().GetHandlingData(modelHash);
+    V8_CHECK(handling, "handling data for vehicle not found");
+
+    V8_TO_NUMBER(val, fvalue);
+
+    handling->SetDriveBiasRear(fvalue);
 }
 
 static void InitialDriveGearsGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
@@ -1759,6 +1789,7 @@ extern V8Class v8HandlingData("HandlingData", Constructor, [](v8::Local<v8::Func
     V8Helpers::SetAccessor(isolate, tpl, "percentSubmerged", &PercentSubmergedGetter, &PercentSubmergedSetter);
     V8Helpers::SetAccessor(isolate, tpl, "percentSubmergedRatio", &PercentSubmergedRatioGetter, &PercentSubmergedRatioSetter);
     V8Helpers::SetAccessor(isolate, tpl, "driveBiasFront", &DriveBiasFrontGetter, &DriveBiasFrontSetter);
+    V8Helpers::SetAccessor(isolate, tpl, "driveBiasRear", &DriveBiasRearGetter, &DriveBiasRearSetter);
     V8Helpers::SetAccessor(isolate, tpl, "acceleration", &AccelerationGetter, &AccelerationSetter);
     V8Helpers::SetAccessor(isolate, tpl, "initialDriveGears", &InitialDriveGearsGetter, &InitialDriveGearsSetter);
     V8Helpers::SetAccessor(isolate, tpl, "driveInertia", &DriveInertiaGetter, &DriveInertiaSetter);
