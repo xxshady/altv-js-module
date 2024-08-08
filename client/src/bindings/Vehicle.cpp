@@ -258,6 +258,48 @@ static void SetWheelTyreWidth(const v8::FunctionCallbackInfo<v8::Value>& info)
     vehicle->SetWheelTyreWidth(wheel, value);
 }
 
+static void GetWheelDynamicFlag(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_GET_THIS_BASE_OBJECT(vehicle, alt::IVehicle);
+    V8_CHECK_ARGS_LEN(2);
+    V8_ARG_TO_INT(1, wheel);
+    V8_ARG_TO_UINT(2, flag);
+    V8_RETURN_BOOLEAN(vehicle->GetWheelDynamicFlag(wheel, flag));
+}
+
+static void SetWheelDynamicFlag(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_GET_THIS_BASE_OBJECT(vehicle, alt::IVehicle);
+    V8_CHECK_ARGS_LEN(3);
+    V8_ARG_TO_INT(1, wheel);
+    V8_ARG_TO_UINT(2, flag);
+    V8_ARG_TO_BOOLEAN(3, value);
+    vehicle->SetWheelDynamicFlag(wheel, flag, value);
+}
+
+static void GetWheelConfigFlag(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_GET_THIS_BASE_OBJECT(vehicle, alt::IVehicle);
+    V8_CHECK_ARGS_LEN(2);
+    V8_ARG_TO_INT(1, wheel);
+    V8_ARG_TO_UINT(2, flag);
+    V8_RETURN_BOOLEAN(vehicle->GetWheelConfigFlag(wheel, flag));
+}
+
+static void SetWheelConfigFlag(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_GET_THIS_BASE_OBJECT(vehicle, alt::IVehicle);
+    V8_CHECK_ARGS_LEN(3);
+    V8_ARG_TO_INT(1, wheel);
+    V8_ARG_TO_UINT(2, flag);
+    V8_ARG_TO_BOOLEAN(3, value);
+    vehicle->SetWheelConfigFlag(wheel, flag, value);
+}
+
 static void GetWheelSurfaceMaterial(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT();
@@ -265,6 +307,15 @@ static void GetWheelSurfaceMaterial(const v8::FunctionCallbackInfo<v8::Value>& i
     V8_CHECK_ARGS_LEN(1);
     V8_ARG_TO_INT(1, wheel);
     V8_RETURN_UINT(vehicle->GetWheelSurfaceMaterial(wheel));
+}
+
+static void SetupTransmission(const v8::FunctionCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_GET_THIS_BASE_OBJECT(vehicle, alt::IVehicle);
+    V8_CHECK_ARGS_LEN(0);
+
+    vehicle->SetupTransmission();
 }
 
 static void StaticGetByRemoteId(const v8::FunctionCallbackInfo<v8::Value>& info)
@@ -331,6 +382,11 @@ extern V8Class v8Vehicle("Vehicle",
                              V8Helpers::SetMethod(isolate, tpl, "getWheelTyreWidth", GetWheelTyreWidth);
                              V8Helpers::SetMethod(isolate, tpl, "setWheelTyreWidth", SetWheelTyreWidth);
 
+                             V8Helpers::SetMethod(isolate, tpl, "getWheelDynamicFlag", GetWheelDynamicFlag);
+                             V8Helpers::SetMethod(isolate, tpl, "setWheelDynamicFlag", SetWheelDynamicFlag);
+                             V8Helpers::SetMethod(isolate, tpl, "getWheelConfigFlag", GetWheelConfigFlag);
+                             V8Helpers::SetMethod(isolate, tpl, "setWheelConfigFlag", SetWheelConfigFlag);
+
                              V8Helpers::SetAccessor<IVehicle, float, &IVehicle::GetEngineTemperature, &IVehicle::SetEngineTemperature>(isolate, tpl, "engineTemperature");
                              V8Helpers::SetAccessor<IVehicle, float, &IVehicle::GetFuelLevel, &IVehicle::SetFuelLevel>(isolate, tpl, "fuelLevel");
                              V8Helpers::SetAccessor<IVehicle, float, &IVehicle::GetOilLevel, &IVehicle::SetOilLevel>(isolate, tpl, "oilLevel");
@@ -347,6 +403,8 @@ extern V8Class v8Vehicle("Vehicle",
 
                              V8Helpers::SetAccessor<IVehicle, float, &IVehicle::GetSteeringAngle, &IVehicle::SetSteeringAngle>(isolate, tpl, "steeringAngle");
                              V8Helpers::SetAccessor<IVehicle, float, &IVehicle::GetSuspensionHeight, &IVehicle::SetSuspensionHeight>(isolate, tpl, "suspensionHeight");
+
+                             V8Helpers::SetMethod(isolate, tpl, "setupTransmission", SetupTransmission);
 
                              /*GETTERS BELOW ARE UNIMPLEMENTED
                              V8Helpers::SetAccessor(isolate, tpl, "isDestroyed", &IsDestroyedGetter);

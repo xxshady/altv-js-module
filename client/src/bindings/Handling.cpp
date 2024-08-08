@@ -221,22 +221,44 @@ static void DriveBiasFrontSetter(v8::Local<v8::String>, v8::Local<v8::Value> val
     vehicle->GetHandling()->SetDriveBiasFront(fvalue);
 }
 
-static void AccelerationGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
+static void DriveBiasRearGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT();
     V8_GET_THIS_INTERNAL_FIELD_ENTITY(1, vehicle, alt::IVehicle);
 
-    V8_RETURN_NUMBER(vehicle->GetHandling()->GetAcceleration());
+    V8_RETURN_NUMBER(vehicle->GetHandling()->GetDriveBiasRear());
 }
 
-static void AccelerationSetter(v8::Local<v8::String>, v8::Local<v8::Value> val, const v8::PropertyCallbackInfo<void>& info)
+static void DriveBiasRearSetter(v8::Local<v8::String>, v8::Local<v8::Value> val, const v8::PropertyCallbackInfo<void>& info)
 {
     V8_GET_ISOLATE_CONTEXT();
     V8_GET_THIS_INTERNAL_FIELD_ENTITY(1, vehicle, alt::IVehicle);
 
     V8_TO_NUMBER(val, fvalue);
     vehicle->ReplaceHandling();
-    vehicle->GetHandling()->SetAcceleration(fvalue);
+    vehicle->GetHandling()->SetDriveBiasRear(fvalue);
+}
+
+static void AccelerationGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    V8_DEPRECATE("HandlingData.acceleration", "HandlingData.driveBiasRear");
+
+    V8_GET_ISOLATE_CONTEXT();
+    V8_GET_THIS_INTERNAL_FIELD_ENTITY(1, vehicle, alt::IVehicle);
+
+    V8_RETURN_NUMBER(vehicle->GetHandling()->GetDriveBiasRear());
+}
+
+static void AccelerationSetter(v8::Local<v8::String>, v8::Local<v8::Value> val, const v8::PropertyCallbackInfo<void>& info)
+{
+    V8_DEPRECATE("HandlingData.acceleration", "HandlingData.driveBiasRear");
+
+    V8_GET_ISOLATE_CONTEXT();
+    V8_GET_THIS_INTERNAL_FIELD_ENTITY(1, vehicle, alt::IVehicle);
+
+    V8_TO_NUMBER(val, fvalue);
+    vehicle->ReplaceHandling();
+    vehicle->GetHandling()->SetDriveBiasRear(fvalue);
 }
 
 static void InitialDriveGearsGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
@@ -1230,6 +1252,7 @@ extern V8Class v8Handling("Handling", Constructor, [](v8::Local<v8::FunctionTemp
     V8Helpers::SetAccessor(isolate, tpl, "percentSubmerged", &PercentSubmergedGetter, &PercentSubmergedSetter);
     V8Helpers::SetAccessor(isolate, tpl, "percentSubmergedRatio", &PercentSubmergedRatioGetter, &PercentSubmergedRatioSetter);
     V8Helpers::SetAccessor(isolate, tpl, "driveBiasFront", &DriveBiasFrontGetter, &DriveBiasFrontSetter);
+    V8Helpers::SetAccessor(isolate, tpl, "driveBiasRear", &DriveBiasRearGetter, &DriveBiasRearSetter);
     V8Helpers::SetAccessor(isolate, tpl, "acceleration", &AccelerationGetter, &AccelerationSetter);
     V8Helpers::SetAccessor(isolate, tpl, "initialDriveGears", &InitialDriveGearsGetter, &InitialDriveGearsSetter);
     V8Helpers::SetAccessor(isolate, tpl, "driveInertia", &DriveInertiaGetter, &DriveInertiaSetter);
