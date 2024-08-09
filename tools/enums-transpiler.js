@@ -1,4 +1,5 @@
 // clang-format off
+const https = require("https");
 const fs = require("fs").promises;
 const assert = require("assert");
 const pathUtil = require("path");
@@ -140,7 +141,7 @@ const modules = [
 
     let jsCode = "";
     for (const m of modules) {
-        const content = await (await fetch(m)).text();
+        const content = await fetchContent(m);
         jsCode += transpileTSEnums(content);
     }
 
@@ -210,3 +211,24 @@ function showLog(...args) {
 function showError(...args) {
     console.error(`[${getTime()}]`, ...args);
 }
+
+function fetchContent(url) {
+    return new Promise((resolve, reject) => {
+      https.get(url, (response) => {
+        let data = '';
+  
+        // A chunk of data has been received.
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+  
+        // The whole response has been received.
+        response.on('end', () => {
+          resolve(data);
+        });
+  
+      }).on('error', (error) => {
+        reject(error);
+      });
+    });
+  }
