@@ -3,7 +3,7 @@
 #include "../V8Helpers.h"
 #include "../V8ResourceImpl.h"
 #include "../V8Module.h"
-#include "JSEnums.h"
+#include "../JSEnums.h"
 
 static void HashCb(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
