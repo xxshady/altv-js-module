@@ -518,10 +518,10 @@ alt::MValueByteArray V8Helpers::V8ToRawBytes(v8::Local<v8::Value> val)
     v8::ValueSerializer serializer(isolate, &delegate);
     delegate.SetSerializer(&serializer);
 
-    serializer.WriteHeader();
-
     // Write the magic bytes to the buffer
     serializer.WriteRawBytes(magicBytes, sizeof(magicBytes));
+
+    serializer.WriteHeader();
 
     // Write the serialized value to the buffer
     bool result;
@@ -547,13 +547,13 @@ v8::MaybeLocal<v8::Value> V8Helpers::RawBytesToV8(alt::MValueByteArrayConst rawB
     v8::ValueDeserializer deserializer(isolate, data, size, &delegate);
     delegate.SetDeserializer(&deserializer);
 
-    bool headerValid;
-    if(!deserializer.ReadHeader(ctx).To(&headerValid) || !headerValid) return v8::MaybeLocal<v8::Value>();
-
     // Check for magic bytes
     uint8_t* magicBytesPtr;
     if(!deserializer.ReadRawBytes(sizeof(magicBytes), (const void**)&magicBytesPtr)) return v8::MaybeLocal<v8::Value>();
     if(memcmp(magicBytesPtr, magicBytes, sizeof(magicBytes)) != 0) return v8::MaybeLocal<v8::Value>();
+
+    bool headerValid;
+    if(!deserializer.ReadHeader(ctx).To(&headerValid) || !headerValid) return v8::MaybeLocal<v8::Value>();
 
     // Deserialize the value
     v8::MaybeLocal<v8::Value> result = deserializer.ReadValue(ctx);
