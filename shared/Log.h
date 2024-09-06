@@ -22,6 +22,8 @@ class Log
     Log() = default;
 
 public:
+    static constexpr const char* LOG_PREFIX = "[js]";
+
     Log(const Log&) = delete;
     Log(Log&&) = delete;
     Log& operator=(const Log&) = delete;
