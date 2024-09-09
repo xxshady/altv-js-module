@@ -114,3 +114,15 @@ ALTV_JS_EXPORT const char* GetSDKHash()
 {
     return ALT_SDK_VERSION;
 }
+
+#ifndef ALTV_JS_SHARED
+namespace alt
+{
+    v8::Platform* GetV8Platform();
+}
+
+v8::Platform* alt::GetV8Platform()
+{
+    return CV8ScriptRuntime::Instance().GetPlatform();
+}
+#endif
