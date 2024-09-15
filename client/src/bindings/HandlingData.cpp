@@ -46,7 +46,7 @@ static void HandlingNameHashGetter(v8::Local<v8::String>, const v8::PropertyCall
 
     V8_GET_THIS_INTERNAL_FIELD_INTEGER(1, modelHash);
 
-    uint32_t modelHash2 = info.This()->GetInternalField(0)->IntegerValue(ctx).ToChecked();
+    uint32_t modelHash2 = info.This()->GetInternalField(0).As<v8::Value>()->IntegerValue(ctx).ToChecked();
 
     auto handling = alt::ICore::Instance().GetHandlingData(modelHash);
     V8_CHECK(handling, "handling data for vehicle not found");

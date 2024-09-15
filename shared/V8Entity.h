@@ -43,8 +43,11 @@ public:
         v8::Local<v8::Object> obj = val.As<v8::Object>();
         if(obj->InternalFieldCount() <= static_cast<int>(V8Class::InternalFields::BASE_OBJECT)) return nullptr;
 
-        v8::Local<v8::Value> i = obj->GetInternalField(static_cast<int>(V8Class::InternalFields::BASE_OBJECT));
-        if(!i->IsExternal()) return nullptr;
+        v8::Local<v8::Data> i = obj->GetInternalField(static_cast<int>(V8Class::InternalFields::BASE_OBJECT));
+        if(!i->IsValue()) return nullptr;
+
+        v8::Local<v8::Value> iv = i.As<v8::Value>();
+        if(!iv->IsExternal()) return nullptr;
 
         return static_cast<V8Entity*>(i.As<v8::External>()->Value());
     }

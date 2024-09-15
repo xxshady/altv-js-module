@@ -6,6 +6,7 @@ function(DownloadFile name path urlpath checksums)
     else()
         set(__deps_file_checksum 0)
     endif()
+
     string(JSON __deps_file_checksum_cdn GET ${checksums} ${name})
     if(NOT ${__deps_file_checksum} STREQUAL ${__deps_file_checksum_cdn})
         message("Downloading ${name}...")
@@ -18,9 +19,11 @@ function(DownloadFile name path urlpath checksums)
         file(DOWNLOAD "${__download_url}" "${path}/${name}"
             STATUS DOWNLOAD_STATUS
         )
+
         # Separate the returned status code, and error message.
         list(GET DOWNLOAD_STATUS 0 STATUS_CODE)
         list(GET DOWNLOAD_STATUS 1 ERROR_MESSAGE)
+        
         # Check if download was successful.
         if(${STATUS_CODE} EQUAL 0)
             message(STATUS "Download completed successfully!")
