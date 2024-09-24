@@ -290,7 +290,7 @@ void V8ResourceImpl::OnRemoveBaseObject(alt::IBaseObject* handle)
     }
 
     entities.erase(handle);
-    ent->GetJSVal(isolate)->SetInternalField(static_cast<int>(V8Class::InternalFields::BASE_OBJECT), v8::External::New(isolate, nullptr));
+    ent->GetJSVal(isolate)->SetInternalField(static_cast<int>(V8Class::InternalFields::BASE_OBJECT), v8::Null(isolate));
     delete ent;
 }
 
@@ -555,7 +555,7 @@ void V8ResourceImpl::DeleteResourceObject(alt::IResource* resource)
 {
     if(resourceObjects.count(resource) == 0) return;
     v8::Local<v8::Object> obj = resourceObjects.at(resource).Get(isolate);
-    obj->SetInternalField(static_cast<int>(V8Class::InternalFields::RESOURCE), v8::External::New(isolate, nullptr));
+    obj->SetInternalField(static_cast<int>(V8Class::InternalFields::RESOURCE), v8::Null(isolate));
     resourceObjects.erase(resource);
 }
 

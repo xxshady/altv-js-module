@@ -82,7 +82,7 @@ static void Destroy(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_CHECK(worker, "Worker is invalid");
 
     worker->Destroy();
-    info.This()->SetInternalField(0, v8::External::New(isolate, nullptr));
+    info.This()->SetInternalField(0, v8::Null(isolate));
     static_cast<CV8ResourceImpl*>(resource)->RemoveWorker(worker);
 }
 

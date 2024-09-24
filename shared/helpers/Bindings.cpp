@@ -9,7 +9,13 @@ void V8Helpers::RegisterFunc(v8::Local<v8::Object> exports, const std::string& _
 
     v8::Local<v8::String> name = V8Helpers::JSValue(_name);
 
-    v8::Local<v8::Function> fn = v8::Function::New(ctx, cb, v8::External::New(isolate, data)).ToLocalChecked();
+    v8::Local<v8::Value> v8_data;
+    if (data)
+    {
+        v8_data = v8::External::New(isolate, data);
+    }
+
+    v8::Local<v8::Function> fn = v8::Function::New(ctx, cb, v8_data).ToLocalChecked();
     fn->SetName(name);
 
     exports->Set(ctx, name, fn);
@@ -82,7 +88,13 @@ void V8Helpers::SetFunction(v8::Isolate* isolate, v8::Local<v8::Context> ctx, v8
 {
     v8::Local<v8::String> _name = v8::String::NewFromUtf8(isolate, name, v8::NewStringType::kInternalized).ToLocalChecked();
 
-    v8::Local<v8::Function> fn = v8::Function::New(ctx, cb, v8::External::New(isolate, userData)).ToLocalChecked();
+    v8::Local<v8::Value> v8_data;
+    if (userData)
+    {
+        v8_data = v8::External::New(isolate, userData);
+    }
+
+    v8::Local<v8::Function> fn = v8::Function::New(ctx, cb, v8_data).ToLocalChecked();
     fn->SetName(_name);
 
     target->Set(ctx, _name, fn);
