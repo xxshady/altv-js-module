@@ -2,12 +2,13 @@ include(../shared/cmake/DepsHelpers.cmake)
 
 # Set this to false, when using a custom nodejs build for testing
 set(__deps_check_enabled true)
+set(NODEJS_VERSION "22.8.0")
 
 function(DownloadDeps)
     set(__base_path "${PROJECT_SOURCE_DIR}/deps/nodejs/lib")
 
     GetBranchAndOS(__deps_branch __deps_os_path_name)
-    set(__deps_url_base_path "https://cdn.alt-mp.com/deps/nodejs/${__deps_branch}/${__deps_os_path_name}")
+    set(__deps_url_base_path "https://cdn.alt-mp.com/deps/nodejs/${NODEJS_VERSION}/${__deps_os_path_name}")
 
     if(__deps_check_enabled)
         if(WIN32)
@@ -35,8 +36,6 @@ function(DownloadDeps)
             DownloadFile("libnode.so.108" "${__base_path}" "" ${__deps_linux_hashes})
         endif()
 
-        if(__deps_current_version)
-            message("NodeJS deps version: ${__deps_current_version}")
-        endif()
+        message("NodeJS deps version: ${NODEJS_VERSION}")
     endif()
 endfunction()

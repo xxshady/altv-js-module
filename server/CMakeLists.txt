@@ -71,6 +71,7 @@ include_directories(
   deps/nodejs/deps/v8/include
   deps/nodejs/deps/uv/include
   deps/nodejs/deps/openssl/openssl/include
+  deps/nodejs/deps/simdjson
   ../shared
   ../shared/deps
 )

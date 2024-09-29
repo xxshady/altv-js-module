@@ -3,8 +3,9 @@
 
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
-#include "crypto/crypto_util.h"
 #include "base_object.h"
+#include "crypto/crypto_keys.h"
+#include "crypto/crypto_util.h"
 #include "env.h"
 #include "memory_tracker.h"
 #include "v8.h"
@@ -18,10 +19,9 @@ constexpr int kMaxSupportedVersion = TLS1_3_VERSION;
 void GetRootCertificates(
     const v8::FunctionCallbackInfo<v8::Value>& args);
 
-void IsExtraRootCertsFileLoaded(
-    const v8::FunctionCallbackInfo<v8::Value>& args);
-
 X509_STORE* NewRootCertStore();
+
+X509_STORE* GetOrCreateRootCertStore();
 
 BIOPointer LoadBIO(Environment* env, v8::Local<v8::Value> v);
 
@@ -43,12 +43,26 @@ class SecureContext final : public BaseObject {
 
   const SSLCtxPointer& ctx() const { return ctx_; }
 
+  // Non-const ctx() that allows for non-default initialization of
+  // the SecureContext.
+  SSLCtxPointer& ctx() { return ctx_; }
+
   SSLPointer CreateSSL();
 
   void SetGetSessionCallback(GetSessionCb cb);
   void SetKeylogCallback(KeylogCb cb);
   void SetNewSessionCallback(NewSessionCb cb);
   void SetSelectSNIContextCallback(SelectSNIContextCb cb);
+
+  inline const X509Pointer& issuer() const { return issuer_; }
+  inline const X509Pointer& cert() const { return cert_; }
+
+  v8::Maybe<void> AddCert(Environment* env, BIOPointer&& bio);
+  v8::Maybe<void> SetCRL(Environment* env, const BIOPointer& bio);
+  v8::Maybe<void> UseKey(Environment* env, std::shared_ptr<KeyObjectData> key);
+
+  void SetCACert(const BIOPointer& bio);
+  void SetRootCerts();
 
   // TODO(joyeecheung): track the memory used by OpenSSL types
   SET_NO_MEMORY_INFO()
@@ -130,13 +144,18 @@ class SecureContext final : public BaseObject {
   X509Pointer issuer_;
 #ifndef OPENSSL_NO_ENGINE
   bool client_cert_engine_provided_ = false;
-  EnginePointer private_key_engine_;
+  ncrypto::EnginePointer private_key_engine_;
 #endif  // !OPENSSL_NO_ENGINE
 
   unsigned char ticket_key_name_[16];
   unsigned char ticket_key_aes_[16];
   unsigned char ticket_key_hmac_[16];
 };
+
+int SSL_CTX_use_certificate_chain(SSL_CTX* ctx,
+                                  BIOPointer&& in,
+                                  X509Pointer* cert,
+                                  X509Pointer* issuer);
 
 }  // namespace crypto
 }  // namespace node

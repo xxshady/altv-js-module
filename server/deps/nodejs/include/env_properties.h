@@ -21,18 +21,33 @@
   V(arrow_message_private_symbol, "node:arrowMessage")                         \
   V(contextify_context_private_symbol, "node:contextify:context")              \
   V(decorated_private_symbol, "node:decorated")                                \
+  V(transfer_mode_private_symbol, "node:transfer_mode")                        \
+  V(host_defined_option_symbol, "node:host_defined_option_symbol")             \
+  V(js_transferable_wrapper_private_symbol, "node:js_transferable_wrapper")    \
+  V(entry_point_module_private_symbol, "node:entry_point_module")              \
+  V(entry_point_promise_private_symbol, "node:entry_point_promise")            \
+  V(module_source_private_symbol, "node:module_source")                        \
+  V(module_export_names_private_symbol, "node:module_export_names")            \
+  V(module_circular_visited_private_symbol, "node:module_circular_visited")    \
+  V(module_export_private_symbol, "node:module_export")                        \
+  V(module_parent_private_symbol, "node:module_parent")                        \
   V(napi_type_tag, "node:napi:type_tag")                                       \
   V(napi_wrapper, "node:napi:wrapper")                                         \
   V(untransferable_object_private_symbol, "node:untransferableObject")         \
-  V(exiting_aliased_Uint32Array, "node:exiting_aliased_Uint32Array")
+  V(exit_info_private_symbol, "node:exit_info_private_symbol")                 \
+  V(promise_trace_id, "node:promise_trace_id")                                 \
+  V(source_map_data_private_symbol, "node:source_map_data_private_symbol")
 
 // Symbols are per-isolate primitives but Environment proxies them
 // for the sake of convenience.
 #define PER_ISOLATE_SYMBOL_PROPERTIES(V)                                       \
+  V(fs_use_promises_symbol, "fs_use_promises_symbol")                          \
   V(async_id_symbol, "async_id_symbol")                                        \
+  V(constructor_key_symbol, "constructor_key_symbol")                          \
   V(handle_onclose_symbol, "handle_onclose")                                   \
   V(no_message_symbol, "no_message_symbol")                                    \
   V(messaging_deserialize_symbol, "messaging_deserialize_symbol")              \
+  V(imported_cjs_symbol, "imported_cjs_symbol")                                \
   V(messaging_transfer_symbol, "messaging_transfer_symbol")                    \
   V(messaging_clone_symbol, "messaging_clone_symbol")                          \
   V(messaging_transfer_list_symbol, "messaging_transfer_list_symbol")          \
@@ -40,17 +55,29 @@
   V(owner_symbol, "owner_symbol")                                              \
   V(onpskexchange_symbol, "onpskexchange")                                     \
   V(resource_symbol, "resource_symbol")                                        \
-  V(trigger_async_id_symbol, "trigger_async_id_symbol")
+  V(trigger_async_id_symbol, "trigger_async_id_symbol")                        \
+  V(source_text_module_default_hdo, "source_text_module_default_hdo")          \
+  V(vm_context_no_contextify, "vm_context_no_contextify")                      \
+  V(vm_dynamic_import_default_internal, "vm_dynamic_import_default_internal")  \
+  V(vm_dynamic_import_main_context_default,                                    \
+    "vm_dynamic_import_main_context_default")                                  \
+  V(vm_dynamic_import_missing_flag, "vm_dynamic_import_missing_flag")          \
+  V(vm_dynamic_import_no_callback, "vm_dynamic_import_no_callback")
 
 // Strings are per-isolate primitives but Environment proxies them
 // for the sake of convenience.  Strings should be ASCII-only.
 #define PER_ISOLATE_STRING_PROPERTIES(V)                                       \
+  V(__filename_string, "__filename")                                           \
+  V(__dirname_string, "__dirname")                                             \
   V(ack_string, "ack")                                                         \
   V(address_string, "address")                                                 \
   V(aliases_string, "aliases")                                                 \
+  V(alpn_callback_string, "ALPNCallback")                                      \
   V(args_string, "args")                                                       \
   V(asn1curve_string, "asn1Curve")                                             \
   V(async_ids_stack_string, "async_ids_stack")                                 \
+  V(attributes_string, "attributes")                                           \
+  V(base_string, "base")                                                       \
   V(bits_string, "bits")                                                       \
   V(block_list_string, "blockList")                                            \
   V(buffer_string, "buffer")                                                   \
@@ -65,7 +92,11 @@
   V(change_string, "change")                                                   \
   V(channel_string, "channel")                                                 \
   V(chunks_sent_since_last_write_string, "chunksSentSinceLastWrite")           \
-  V(clone_unsupported_type_str, "Cannot transfer object of unsupported type.") \
+  V(clone_unsupported_type_str, "Cannot clone object of unsupported type.")    \
+  V(clone_transfer_needed_str,                                                 \
+    "Object that needs transfer was found in message but not listed in "       \
+    "transferList")                                                            \
+  V(clone_untransferable_str, "Found invalid value in transferList.")          \
   V(code_string, "code")                                                       \
   V(commonjs_string, "commonjs")                                               \
   V(config_string, "config")                                                   \
@@ -113,8 +144,9 @@
   V(env_var_settings_string, "envVarSettings")                                 \
   V(errno_string, "errno")                                                     \
   V(error_string, "error")                                                     \
+  V(events, "events")                                                          \
+  V(events_waiting, "eventsWaiting")                                           \
   V(exchange_string, "exchange")                                               \
-  V(exit_code_string, "exitCode")                                              \
   V(expire_string, "expire")                                                   \
   V(exponent_string, "exponent")                                               \
   V(exports_string, "exports")                                                 \
@@ -135,6 +167,7 @@
   V(frames_received_string, "framesReceived")                                  \
   V(frames_sent_string, "framesSent")                                          \
   V(function_string, "function")                                               \
+  V(get_string, "get")                                                         \
   V(get_data_clone_error_string, "_getDataCloneError")                         \
   V(get_shared_array_buffer_id_string, "_getSharedArrayBufferId")              \
   V(gid_string, "gid")                                                         \
@@ -182,6 +215,7 @@
   V(kind_string, "kind")                                                       \
   V(length_string, "length")                                                   \
   V(library_string, "library")                                                 \
+  V(loop_count, "loopCount")                                                   \
   V(mac_string, "mac")                                                         \
   V(max_buffer_string, "maxBuffer")                                            \
   V(max_concurrent_streams_string, "maxConcurrentStreams")                     \
@@ -226,12 +260,14 @@
   V(openssl_error_stack, "opensslErrorStack")                                  \
   V(options_string, "options")                                                 \
   V(order_string, "order")                                                     \
+  V(original_string, "original")                                               \
   V(output_string, "output")                                                   \
   V(overlapped_string, "overlapped")                                           \
   V(parse_error_string, "Parse Error")                                         \
   V(password_string, "password")                                               \
   V(path_string, "path")                                                       \
   V(pending_handle_string, "pendingHandle")                                    \
+  V(permission_string, "permission")                                           \
   V(pid_string, "pid")                                                         \
   V(ping_rtt_string, "pingRTT")                                                \
   V(pipe_source_string, "pipeSource")                                          \
@@ -258,7 +294,13 @@
   V(regexp_string, "regexp")                                                   \
   V(rename_string, "rename")                                                   \
   V(replacement_string, "replacement")                                         \
+  V(required_module_facade_url_string,                                         \
+    "node:internal/require_module_default_facade")                             \
+  V(required_module_facade_source_string,                                      \
+    "export * from 'original'; export { default } from 'original'; export "    \
+    "const __esModule = true;")                                                \
   V(require_string, "require")                                                 \
+  V(resource_string, "resource")                                               \
   V(retry_string, "retry")                                                     \
   V(salt_length_string, "saltLength")                                          \
   V(scheme_string, "scheme")                                                   \
@@ -268,6 +310,7 @@
   V(servername_string, "servername")                                           \
   V(service_string, "service")                                                 \
   V(session_id_string, "sessionId")                                            \
+  V(set_string, "set")                                                         \
   V(shell_string, "shell")                                                     \
   V(signal_string, "signal")                                                   \
   V(sink_string, "sink")                                                       \
@@ -276,6 +319,7 @@
   V(sni_context_string, "sni_context")                                         \
   V(source_string, "source")                                                   \
   V(source_map_url_string, "sourceMapURL")                                     \
+  V(specifier_string, "specifier")                                             \
   V(stack_string, "stack")                                                     \
   V(standard_name_string, "standardName")                                      \
   V(start_time_string, "startTime")                                            \
@@ -297,6 +341,8 @@
   V(time_to_first_header_string, "timeToFirstHeader")                          \
   V(tls_ticket_string, "tlsTicket")                                            \
   V(transfer_string, "transfer")                                               \
+  V(transfer_unsupported_type_str,                                             \
+    "Cannot transfer object of unsupported type.")                             \
   V(ttl_string, "ttl")                                                         \
   V(type_string, "type")                                                       \
   V(uid_string, "uid")                                                         \
@@ -321,24 +367,24 @@
   V(writable_string, "writable")                                               \
   V(write_host_object_string, "_writeHostObject")                              \
   V(write_queue_size_string, "writeQueueSize")                                 \
-  V(x_forwarded_string, "x-forwarded-for")                                     \
-  V(zero_return_string, "ZERO_RETURN")
+  V(x_forwarded_string, "x-forwarded-for")
 
 #define PER_ISOLATE_TEMPLATE_PROPERTIES(V)                                     \
   V(async_wrap_ctor_template, v8::FunctionTemplate)                            \
   V(async_wrap_object_ctor_template, v8::FunctionTemplate)                     \
-  V(base_object_ctor_template, v8::FunctionTemplate)                           \
-  V(binding_data_ctor_template, v8::FunctionTemplate)                          \
+  V(binding_data_default_template, v8::ObjectTemplate)                         \
   V(blob_constructor_template, v8::FunctionTemplate)                           \
+  V(blob_reader_constructor_template, v8::FunctionTemplate)                    \
   V(blocklist_constructor_template, v8::FunctionTemplate)                      \
   V(contextify_global_template, v8::ObjectTemplate)                            \
   V(contextify_wrapper_template, v8::ObjectTemplate)                           \
-  V(compiled_fn_entry_template, v8::ObjectTemplate)                            \
+  V(crypto_key_object_handle_constructor, v8::FunctionTemplate)                \
   V(env_proxy_template, v8::ObjectTemplate)                                    \
   V(env_proxy_ctor_template, v8::FunctionTemplate)                             \
   V(dir_instance_template, v8::ObjectTemplate)                                 \
   V(fd_constructor_template, v8::ObjectTemplate)                               \
   V(fdclose_constructor_template, v8::ObjectTemplate)                          \
+  V(fdentry_constructor_template, v8::FunctionTemplate)                        \
   V(filehandlereadwrap_template, v8::ObjectTemplate)                           \
   V(fsreqpromise_constructor_template, v8::ObjectTemplate)                     \
   V(handle_wrap_ctor_template, v8::FunctionTemplate)                           \
@@ -348,8 +394,10 @@
   V(http2ping_constructor_template, v8::ObjectTemplate)                        \
   V(i18n_converter_template, v8::ObjectTemplate)                               \
   V(intervalhistogram_constructor_template, v8::FunctionTemplate)              \
+  V(js_transferable_constructor_template, v8::FunctionTemplate)                \
   V(libuv_stream_wrap_ctor_template, v8::FunctionTemplate)                     \
   V(message_port_constructor_template, v8::FunctionTemplate)                   \
+  V(module_wrap_constructor_template, v8::FunctionTemplate)                    \
   V(microtask_queue_ctor_template, v8::FunctionTemplate)                       \
   V(pipe_constructor_template, v8::FunctionTemplate)                           \
   V(promise_wrap_template, v8::ObjectTemplate)                                 \
@@ -358,7 +406,11 @@
   V(secure_context_constructor_template, v8::FunctionTemplate)                 \
   V(shutdown_wrap_template, v8::ObjectTemplate)                                \
   V(socketaddress_constructor_template, v8::FunctionTemplate)                  \
+  V(sqlite_statement_sync_constructor_template, v8::FunctionTemplate)          \
+  V(streambaseentry_ctor_template, v8::FunctionTemplate)                       \
   V(streambaseoutputstream_constructor_template, v8::ObjectTemplate)           \
+  V(streamentry_ctor_template, v8::FunctionTemplate)                           \
+  V(streamentry_opaque_ctor_template, v8::FunctionTemplate)                    \
   V(qlogoutputstream_constructor_template, v8::ObjectTemplate)                 \
   V(tcp_constructor_template, v8::FunctionTemplate)                            \
   V(tty_constructor_template, v8::FunctionTemplate)                            \
@@ -376,14 +428,12 @@
   V(async_hooks_promise_resolve_function, v8::Function)                        \
   V(buffer_prototype_object, v8::Object)                                       \
   V(crypto_key_object_constructor, v8::Function)                               \
-  V(crypto_key_object_handle_constructor, v8::Function)                        \
   V(crypto_key_object_private_constructor, v8::Function)                       \
   V(crypto_key_object_public_constructor, v8::Function)                        \
   V(crypto_key_object_secret_constructor, v8::Function)                        \
   V(domexception_function, v8::Function)                                       \
   V(enhance_fatal_stack_after_inspector, v8::Function)                         \
   V(enhance_fatal_stack_before_inspector, v8::Function)                        \
-  V(fs_use_promises_symbol, v8::Symbol)                                        \
   V(get_source_map_error_source, v8::Function)                                 \
   V(host_import_module_dynamically_callback, v8::Function)                     \
   V(host_initialize_import_meta_object_callback, v8::Function)                 \
@@ -402,15 +452,17 @@
   V(immediate_callback_function, v8::Function)                                 \
   V(inspector_console_extension_installer, v8::Function)                       \
   V(inspector_disable_async_hooks, v8::Function)                               \
+  V(inspector_disable_network_tracking, v8::Function)                          \
   V(inspector_enable_async_hooks, v8::Function)                                \
+  V(inspector_enable_network_tracking, v8::Function)                           \
   V(maybe_cache_generated_source_map, v8::Function)                            \
   V(messaging_deserialize_create_object, v8::Function)                         \
   V(message_port, v8::Object)                                                  \
   V(builtin_module_require, v8::Function)                                      \
   V(performance_entry_callback, v8::Function)                                  \
-  V(performance_entry_template, v8::Function)                                  \
   V(prepare_stack_trace_callback, v8::Function)                                \
   V(process_object, v8::Object)                                                \
+  V(process_emit_warning_sync, v8::Function)                                   \
   V(primordials, v8::Object)                                                   \
   V(primordials_safe_map_prototype_object, v8::Object)                         \
   V(primordials_safe_set_prototype_object, v8::Object)                         \
