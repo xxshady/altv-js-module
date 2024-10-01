@@ -52,7 +52,7 @@ static void* ToMemoryBuffer(v8::Local<v8::Value> val, v8::Local<v8::Context> ctx
         if(cls == V8Class::ObjectClass::MEMORY_BUFFER)
         {
             void* memory = obj->GetAlignedPointerFromInternalField(1);
-            uint32_t size = obj->GetInternalField(2)->Uint32Value(ctx).ToChecked();
+            uint32_t size = obj->GetInternalField(2).As<v8::Value>()->Uint32Value(ctx).ToChecked();
 
             if(size > 0) return memory;
         }

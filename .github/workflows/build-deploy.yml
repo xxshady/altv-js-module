@@ -85,7 +85,7 @@ jobs:
           cd server
           mkdir -p upload/modules/js-module
           cp ./dist/libjs-module.so ./upload/modules/js-module
-          cp ./dist/libnode.so.108 ./upload/modules/js-module
+          cp ./dist/libnode.so ./upload/modules/js-module
           echo ${{ steps.version.outputs.SDK_COMMIT }} >> ./upload/sdk.version
 
       - uses: actions/upload-artifact@v3

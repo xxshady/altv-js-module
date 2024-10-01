@@ -60,7 +60,6 @@ void V8Helpers::SetAccessor(v8::Isolate* isolate, v8::Local<v8::FunctionTemplate
                                           getter,
                                           setter,
                                           v8::Local<v8::Value>(),
-                                          v8::AccessControl::DEFAULT,
                                           setter != nullptr ? v8::PropertyAttribute::None : v8::PropertyAttribute::ReadOnly);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2015-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -339,6 +339,9 @@ void ossl_X509_PUBKEY_INTERNAL_free(X509_PUBKEY *xpub);
 
 RSA *ossl_d2i_RSA_PSS_PUBKEY(RSA **a, const unsigned char **pp, long length);
 int ossl_i2d_RSA_PSS_PUBKEY(const RSA *a, unsigned char **pp);
+# ifndef OPENSSL_NO_DSA
+DSA *ossl_d2i_DSA_PUBKEY(DSA **a, const unsigned char **pp, long length);
+# endif /* OPENSSL_NO_DSA */
 # ifndef OPENSSL_NO_DH
 DH *ossl_d2i_DH_PUBKEY(DH **a, const unsigned char **pp, long length);
 int ossl_i2d_DH_PUBKEY(const DH *a, unsigned char **pp);
@@ -364,4 +367,21 @@ EVP_PKEY *ossl_d2i_PUBKEY_legacy(EVP_PKEY **a, const unsigned char **pp,
 
 int x509v3_add_len_value_uchar(const char *name, const unsigned char *value,
                                size_t vallen, STACK_OF(CONF_VALUE) **extlist);
+/* Attribute addition functions not checking for duplicate attributes */
+STACK_OF(X509_ATTRIBUTE) *ossl_x509at_add1_attr(STACK_OF(X509_ATTRIBUTE) **x,
+                                                X509_ATTRIBUTE *attr);
+STACK_OF(X509_ATTRIBUTE) *ossl_x509at_add1_attr_by_OBJ(STACK_OF(X509_ATTRIBUTE) **x,
+                                                       const ASN1_OBJECT *obj,
+                                                       int type,
+                                                       const unsigned char *bytes,
+                                                       int len);
+STACK_OF(X509_ATTRIBUTE) *ossl_x509at_add1_attr_by_NID(STACK_OF(X509_ATTRIBUTE) **x,
+                                                       int nid, int type,
+                                                       const unsigned char *bytes,
+                                                       int len);
+STACK_OF(X509_ATTRIBUTE) *ossl_x509at_add1_attr_by_txt(STACK_OF(X509_ATTRIBUTE) **x,
+                                                       const char *attrname,
+                                                       int type,
+                                                       const unsigned char *bytes,
+                                                       int len);
 #endif  /* OSSL_CRYPTO_X509_H */

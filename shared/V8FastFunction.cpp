@@ -18,7 +18,8 @@ v8::Local<v8::FunctionTemplate> V8FastFunction::GetTemplate(v8::Isolate* isolate
 
     v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(
       isolate, slowCallback, v8::Local<v8::Value>(), v8::Local<v8::Signature>(), 1, v8::ConstructorBehavior::kThrow, v8::SideEffectType::kHasSideEffect, &fastCallback);
-    tplMap.insert({ isolate, v8::Persistent<v8::FunctionTemplate, v8::CopyablePersistentTraits<v8::FunctionTemplate>>(isolate, tpl) });
+
+    tplMap.insert({ isolate, v8::Persistent<v8::FunctionTemplate>(isolate, tpl) });
     return tpl;
 }
 
