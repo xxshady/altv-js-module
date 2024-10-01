@@ -33,7 +33,7 @@ function(DownloadDeps)
 
             GetCDNInfo("${__deps_url_base_path}" __deps_linux_hashes __deps_current_version)
 
-            DownloadFile("libnode.so.108" "${__base_path}" "" ${__deps_linux_hashes})
+            DownloadFile("libnode.so" "${__base_path}" "" ${__deps_linux_hashes})
         endif()
 
         message("NodeJS deps version: ${NODEJS_VERSION}")
