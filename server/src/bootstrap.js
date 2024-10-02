@@ -4,6 +4,7 @@ const { defaultLoad, defaultLoadSync } = internalRequire('internal/modules/esm/l
 const { initializeImportMeta } = internalRequire('internal/modules/esm/initialize_import_meta')
 const { translators } = internalRequire('internal/modules/esm/translators');
 const { ModuleWrap } = internalRequire('internal/test/binding').internalBinding('module_wrap');
+const BuildInModule = internalRequire('module');
 
 const path = require('path');
 const alt = process._linkedBinding('alt');
@@ -205,6 +206,17 @@ function setupImports(esmLoader) {
   };
 
   esmLoader.setCustomizations(altLoader);
+
+  // CJS require hook
+  const _origModuleLoad = BuildInModule._load;
+  BuildInModule._load = function _load(request, parent, isMain) {
+    const altModule = altModules.get(request);
+    if (altModule !== undefined) {
+      return process._linkedBinding(altModule);
+    }
+  
+    return _origModuleLoad(request, parent, isMain);
+  }
 }
 
 // ***** Utils
