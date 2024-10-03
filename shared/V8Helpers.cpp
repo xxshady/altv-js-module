@@ -134,14 +134,7 @@ v8::Local<v8::Object> V8Helpers::CreateCustomObject(v8::Isolate* isolate,
                                                     v8::GenericNamedPropertyQueryCallback query)
 {
     v8::Local<v8::ObjectTemplate> objTemplate = v8::ObjectTemplate::New(isolate);
-    v8::NamedPropertyHandlerConfiguration config;
-    config.getter = getter;
-    config.setter = setter;
-    config.deleter = deleter;
-    config.query = query;
-    config.enumerator = enumerator;
-    config.data = v8::External::New(isolate, data);
-    config.flags = v8::PropertyHandlerFlags::kHasNoSideEffect;
+    v8::NamedPropertyHandlerConfiguration config{ getter, setter, query, deleter, enumerator, v8::External::New(isolate, data), v8::PropertyHandlerFlags::kHasNoSideEffect };
     objTemplate->SetHandler(config);
 
     v8::Local<v8::Object> obj = objTemplate->NewInstance(isolate->GetEnteredOrMicrotaskContext()).ToLocalChecked();
@@ -385,7 +378,10 @@ V8Class::ObjectClass V8Helpers::GetObjectClass(v8::Local<v8::Object> obj)
     if(obj->InternalFieldCount() <= static_cast<int>(V8Class::InternalFields::OBJECT_CLASS))
         return V8Class::ObjectClass::NONE;
 
-    auto val = obj->GetInternalField(static_cast<int>(V8Class::InternalFields::OBJECT_CLASS));
+    auto data = obj->GetInternalField(static_cast<int>(V8Class::InternalFields::OBJECT_CLASS));
+    if(!data->IsValue()) return V8Class::ObjectClass::NONE;
+
+    auto val = data.As<v8::Value>();
     if(!val->IsExternal())
         return V8Class::ObjectClass::NONE;
 

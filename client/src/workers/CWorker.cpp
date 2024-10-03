@@ -150,7 +150,11 @@ void CWorker::SetupIsolate()
       });
 
     isolate->SetHostImportModuleDynamicallyCallback(
-      [](v8::Local<v8::Context> context, v8::Local<v8::ScriptOrModule> referrer, v8::Local<v8::String> specifier, v8::Local<v8::FixedArray> assertions)
+      [](v8::Local<v8::Context> context,
+         v8::Local<v8::Data> host_defined_options,
+         v8::Local<v8::Value> resource_name,
+         v8::Local<v8::String> specifier,
+         v8::Local<v8::FixedArray> import_attributes)
       {
           v8::Isolate* isolate = context->GetIsolate();
           v8::Isolate::Scope isolateScope(isolate);
@@ -161,13 +165,15 @@ void CWorker::SetupIsolate()
           if(maybeResolver.IsEmpty()) return v8::MaybeLocal<v8::Promise>();
           v8::Local<v8::Promise::Resolver> resolver = maybeResolver.ToLocalChecked();
 
+          // if(!resource_name->IsString()) return v8::MaybeLocal<v8::Promise>();
+
           CWorker* worker = static_cast<CWorker*>(context->GetAlignedPointerFromEmbedderData(2));
-          std::string referrerName = *v8::String::Utf8Value(isolate, referrer->GetResourceName());
+          std::string referrerName = *v8::String::Utf8Value(isolate, resource_name);
           v8::Local<v8::Module> referrerModule = worker->GetModuleFromPath(referrerName);
           if(referrerModule.IsEmpty() && referrerName != "<bootstrapper>") resolver->Reject(context, v8::Exception::ReferenceError(V8Helpers::JSValue("Could not resolve referrer module")));
           else
           {
-              v8::MaybeLocal<v8::Module> maybeModule = CWorker::Import(context, specifier, assertions, referrerModule);
+              v8::MaybeLocal<v8::Module> maybeModule = CWorker::Import(context, specifier, import_attributes, referrerModule);
               if(maybeModule.IsEmpty()) resolver->Reject(context, v8::Exception::ReferenceError(V8Helpers::JSValue("Could not resolve module")));
               else
               {
@@ -218,7 +224,7 @@ bool CWorker::SetupScript()
       {
           v8::Local<v8::Context> ctx = context.Get(isolate);
           v8::MaybeLocal<v8::Module> maybeModule;
-          v8::ScriptOrigin scriptOrigin(isolate, V8Helpers::JSValue("<bootstrapper>"), 0, 0, false, -1, v8::Local<v8::Value>(), false, false, true, v8::Local<v8::PrimitiveArray>());
+          v8::ScriptOrigin scriptOrigin(V8Helpers::JSValue("<bootstrapper>"), 0, 0, false, -1, v8::Local<v8::Value>(), false, false, true, v8::Local<v8::PrimitiveArray>());
           v8::ScriptCompiler::Source source{ V8Helpers::JSValue(bootstrap_code), scriptOrigin };
           maybeModule = v8::ScriptCompiler::CompileModule(isolate, &source);
 

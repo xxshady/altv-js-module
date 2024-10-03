@@ -1,18 +1,22 @@
-
 #include "CV8ScriptRuntime.h"
 #include "inspector/CV8InspectorClient.h"
 #include "inspector/CV8InspectorChannel.h"
 #include "V8Module.h"
 #include "events/Events.h"
 #include "CProfiler.h"
+#include <Windows.h>
 
 CV8ScriptRuntime::CV8ScriptRuntime()
 {
     // !!! Don't change these without adjusting bytecode module !!!
     v8::V8::SetFlagsFromString("--harmony-import-assertions --short-builtin-calls --no-lazy --no-flush-bytecode");
     platform = v8::platform::NewDefaultPlatform();
+
+    v8::LogEventCallback;
+
     v8::V8::InitializePlatform(platform.get());
     v8::V8::InitializeICU((alt::ICore::Instance().GetClientPath() + "/libs/icudtl_v8.dat").c_str());
+    // MessageBoxA(NULL, "js init 3", "", MB_OK);
     v8::V8::Initialize();
 
     create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
@@ -22,9 +26,10 @@ CV8ScriptRuntime::CV8ScriptRuntime()
     isolate->SetFatalErrorHandler([](const char* location, const char* message) { Log::Error << "[V8] " << location << ": " << message << Log::Endl; });
 
     isolate->SetOOMErrorHandler(
-      [](const char* location, bool isHeap)
+      [](const char* location, const v8::OOMDetails& details)
       {
-          if(!isHeap) return;
+          if(!details.is_heap_oom) return;
+
           Log::Error << "[V8] " << location << ": Heap out of memory. Forward this to the server developers." << Log::Endl;
           Log::Error << "[V8] The current heap limit can be shown with the 'heap' console command. Consider increasing your system RAM." << Log::Endl;
       });
@@ -79,14 +84,18 @@ CV8ScriptRuntime::CV8ScriptRuntime()
       });
 
     isolate->SetHostImportModuleDynamicallyCallback(
-      [](v8::Local<v8::Context> context, v8::Local<v8::ScriptOrModule> referrer, v8::Local<v8::String> specifier, v8::Local<v8::FixedArray> importAssertions)
+      [](v8::Local<v8::Context> context,
+         v8::Local<v8::Data> host_defined_options,
+         v8::Local<v8::Value> resource_name,
+         v8::Local<v8::String> specifier,
+         v8::Local<v8::FixedArray> import_attributes)
       {
           v8::Isolate* isolate = context->GetIsolate();
 
-          auto referrerVal = referrer->GetResourceName();
-          if(referrerVal->IsUndefined()) return v8::MaybeLocal<v8::Promise>();
+          if(resource_name->IsUndefined())
+              return v8::MaybeLocal<v8::Promise>();
 
-          std::string referrerUrl = *v8::String::Utf8Value(isolate, referrer->GetResourceName());
+          std::string referrerUrl = *v8::String::Utf8Value(isolate, resource_name);
           auto resource = static_cast<CV8ResourceImpl*>(V8ResourceImpl::Get(context));
 
           auto resolver = v8::Promise::Resolver::New(context).ToLocalChecked();
@@ -94,7 +103,7 @@ CV8ScriptRuntime::CV8ScriptRuntime()
           V8Helpers::CPersistent<v8::Promise::Resolver> presolver(isolate, resolver);
           V8Helpers::CPersistent<v8::String> pspecifier(isolate, specifier);
           V8Helpers::CPersistent<v8::Module> preferrerModule(isolate, resource->GetModuleFromPath(referrerUrl));
-          V8Helpers::CPersistent<v8::FixedArray> pimportAssertions(isolate, importAssertions);
+          V8Helpers::CPersistent<v8::FixedArray> pimportAssertions(isolate, import_attributes);
 
           // careful what we take in by value in the lambda
           // it is possible pass v8::Local but should not be done
@@ -236,7 +245,7 @@ void CV8ScriptRuntime::OnDispose()
     while(isolate->IsInUse()) isolate->Exit();
     isolate->Dispose();
     v8::V8::Dispose();
-    v8::V8::ShutdownPlatform();
+    v8::V8::DisposePlatform();
     delete create_params.array_buffer_allocator;
 
     if(CProfiler::Instance().IsEnabled()) CProfiler::Instance().Dump(alt::ICore::Instance().GetClientPath());

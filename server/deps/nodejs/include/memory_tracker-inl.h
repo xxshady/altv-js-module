@@ -4,6 +4,7 @@
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #include "memory_tracker.h"
+#include "util-inl.h"
 
 namespace node {
 
@@ -27,7 +28,8 @@ class MemoryRetainerNode : public v8::EmbedderGraph::Node {
     CHECK_NOT_NULL(retainer_);
     v8::HandleScope handle_scope(tracker->isolate());
     v8::Local<v8::Object> obj = retainer_->WrappedObject();
-    if (!obj.IsEmpty()) wrapper_node_ = tracker->graph()->V8Node(obj);
+    if (!obj.IsEmpty())
+      wrapper_node_ = tracker->graph()->V8Node(obj.As<v8::Value>());
 
     name_ = retainer_->MemoryInfoName();
     size_ = retainer_->SelfSize();
@@ -44,7 +46,7 @@ class MemoryRetainerNode : public v8::EmbedderGraph::Node {
     is_root_node_ = is_root_node;
   }
 
-  const char* Name() override { return name_.c_str(); }
+  const char* Name() override { return name_; }
   const char* NamePrefix() override { return "Node /"; }
   size_t SizeInBytes() override { return size_; }
   // TODO(addaleax): Merging this with the "official" WrapperNode() method
@@ -75,7 +77,7 @@ class MemoryRetainerNode : public v8::EmbedderGraph::Node {
 
   // Otherwise (retainer == nullptr), we set these fields in an ad-hoc way
   bool is_root_node_ = false;
-  std::string name_;
+  const char* name_;
   size_t size_ = 0;
   v8::EmbedderGraph::Node::Detachedness detachedness_ =
       v8::EmbedderGraph::Node::Detachedness::kUnknown;
@@ -229,7 +231,9 @@ void MemoryTracker::TrackField(const char* edge_name,
                                const v8::Local<T>& value,
                                const char* node_name) {
   if (!value.IsEmpty())
-    graph_->AddEdge(CurrentNode(), graph_->V8Node(value), edge_name);
+    graph_->AddEdge(CurrentNode(),
+                    graph_->V8Node(value.template As<v8::Value>()),
+                    edge_name);
 }
 
 template <typename T>
@@ -267,13 +271,6 @@ void MemoryTracker::TrackInlineField(const char* name,
                                      const uv_async_t& value,
                                      const char* node_name) {
   TrackInlineFieldWithSize(name, sizeof(value), "uv_async_t");
-}
-
-template <class NativeT, class V8T>
-void MemoryTracker::TrackField(const char* name,
-                               const AliasedBufferBase<NativeT, V8T>& value,
-                               const char* node_name) {
-  TrackField(name, value.GetJSArray(), "AliasedBuffer");
 }
 
 void MemoryTracker::Track(const MemoryRetainer* retainer,
@@ -318,8 +315,8 @@ MemoryRetainerNode* MemoryTracker::AddNode(const MemoryRetainer* retainer,
   if (CurrentNode() != nullptr) graph_->AddEdge(CurrentNode(), n, edge_name);
 
   if (n->JSWrapperNode() != nullptr) {
-    graph_->AddEdge(n, n->JSWrapperNode(), "wrapped");
-    graph_->AddEdge(n->JSWrapperNode(), n, "wrapper");
+    graph_->AddEdge(n, n->JSWrapperNode(), "native_to_javascript");
+    graph_->AddEdge(n->JSWrapperNode(), n, "javascript_to_native");
   }
 
   return n;

@@ -34,7 +34,7 @@ class Deletable {
 };
 
 std::unique_ptr<v8_inspector::StringBuffer> Utf8ToStringView(
-    const std::string& message);
+    const std::string_view message);
 
 using MessageQueue = std::deque<std::unique_ptr<Request>>;
 
@@ -78,6 +78,7 @@ class MainThreadInterface :
   void DispatchMessages();
   void Post(std::unique_ptr<Request> request);
   bool WaitForFrontendEvent();
+  void StopWaitingForFrontendEvent();
   std::shared_ptr<MainThreadHandle> GetHandle();
   Agent* inspector_agent() {
     return agent_;
@@ -94,6 +95,10 @@ class MainThreadInterface :
   // when we reenter the DispatchMessages function.
   MessageQueue dispatching_message_queue_;
   bool dispatching_messages_ = false;
+  // This flag indicates an internal request to exit the loop in
+  // WaitForFrontendEvent(). It's set to true by calling
+  // StopWaitingForFrontendEvent().
+  bool stop_waiting_for_frontend_event_requested_ = false;
   ConditionVariable incoming_message_cond_;
   // Used from any thread
   Agent* const agent_;

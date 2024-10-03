@@ -24,9 +24,11 @@
 
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
+#include "uv.h"
 #include "v8.h"
 
 #include "node.h"
+#include "node_exit_code.h"
 
 #include <climits>
 #include <cstddef>
@@ -35,12 +37,14 @@
 #include <cstring>
 
 #include <array>
+#include <bit>
 #include <limits>
 #include <memory>
+#include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <set>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -53,13 +57,10 @@
 
 namespace node {
 
-// Maybe remove kPathSeparator when cpp17 is ready
 #ifdef _WIN32
-    constexpr char kPathSeparator = '\\';
 /* MAX_PATH is in characters, not bytes. Make sure we have enough headroom. */
 #define PATH_MAX_BYTES (MAX_PATH * 4)
 #else
-    constexpr char kPathSeparator = '/';
 #define PATH_MAX_BYTES (PATH_MAX)
 #endif
 
@@ -112,27 +113,45 @@ struct AssertionInfo {
   const char* message;
   const char* function;
 };
-[[noreturn]] void NODE_EXTERN_PRIVATE Assert(const AssertionInfo& info);
-[[noreturn]] void NODE_EXTERN_PRIVATE Abort();
-void DumpBacktrace(FILE* fp);
+
+// This indirectly calls backtrace so it can not be marked as [[noreturn]].
+void NODE_EXTERN_PRIVATE Assert(const AssertionInfo& info);
+void DumpNativeBacktrace(FILE* fp);
+void DumpJavaScriptBacktrace(FILE* fp);
 
 // Windows 8+ does not like abort() in Release mode
 #ifdef _WIN32
-#define ABORT_NO_BACKTRACE() _exit(134)
+#define ABORT_NO_BACKTRACE() _exit(static_cast<int>(node::ExitCode::kAbort))
 #else
 #define ABORT_NO_BACKTRACE() abort()
 #endif
 
-#define ABORT() node::Abort()
+// Caller of this macro must not be marked as [[noreturn]]. Printing of
+// backtraces may not work correctly in [[noreturn]] functions because
+// when generating code for them the compiler can choose not to
+// maintain the frame pointers or link registers that are necessary for
+// correct backtracing.
+// `ABORT` must be a macro and not a [[noreturn]] function to make sure the
+// backtrace is correct.
+#define ABORT()                                                                \
+  do {                                                                         \
+    node::DumpNativeBacktrace(stderr);                                         \
+    node::DumpJavaScriptBacktrace(stderr);                                     \
+    fflush(stderr);                                                            \
+    ABORT_NO_BACKTRACE();                                                      \
+  } while (0)
 
-#define ERROR_AND_ABORT(expr)                                                 \
-  do {                                                                        \
-    /* Make sure that this struct does not end up in inline code, but      */ \
-    /* rather in a read-only data section when modifying this code.        */ \
-    static const node::AssertionInfo args = {                                 \
-      __FILE__ ":" STRINGIFY(__LINE__), #expr, PRETTY_FUNCTION_NAME           \
-    };                                                                        \
-    node::Assert(args);                                                       \
+#define ERROR_AND_ABORT(expr)                                                  \
+  do {                                                                         \
+    /* Make sure that this struct does not end up in inline code, but      */  \
+    /* rather in a read-only data section when modifying this code.        */  \
+    static const node::AssertionInfo error_and_abort_args = {                  \
+        __FILE__ ":" STRINGIFY(__LINE__), #expr, PRETTY_FUNCTION_NAME};        \
+    node::Assert(error_and_abort_args);                                        \
+    /* `node::Assert` doesn't return. Add an [[noreturn]] abort() here to  */  \
+    /* make the compiler happy about no return value in the caller         */  \
+    /* function when calling ERROR_AND_ABORT.                              */  \
+    ABORT_NO_BACKTRACE();                                                      \
   } while (0)
 
 #ifdef __GNUC__
@@ -142,7 +161,11 @@ void DumpBacktrace(FILE* fp);
 #else
 #define LIKELY(expr) expr
 #define UNLIKELY(expr) expr
+#if defined(_MSC_VER)
+#define PRETTY_FUNCTION_NAME __FUNCSIG__
+#else
 #define PRETTY_FUNCTION_NAME ""
+#endif
 #endif
 
 #define STRINGIFY_(x) #x
@@ -193,7 +216,7 @@ void DumpBacktrace(FILE* fp);
 #define UNREACHABLE(...)                                                      \
   ERROR_AND_ABORT("Unreachable code reached" __VA_OPT__(": ") __VA_ARGS__)
 
-// ECMA262 20.1.2.6 Number.MAX_SAFE_INTEGER (2^53-1)
+// ECMA-262, 15th edition, 21.1.2.6. Number.MAX_SAFE_INTEGER (2^53-1)
 constexpr int64_t kMaxSafeJsInteger = 9007199254740991;
 
 inline bool IsSafeJsInt(v8::Local<v8::Value> v);
@@ -284,7 +307,7 @@ class KVStore {
 
   virtual v8::MaybeLocal<v8::String> Get(v8::Isolate* isolate,
                                          v8::Local<v8::String> key) const = 0;
-  virtual v8::Maybe<std::string> Get(const char* key) const = 0;
+  virtual std::optional<std::string> Get(const char* key) const = 0;
   virtual void Set(v8::Isolate* isolate,
                    v8::Local<v8::String> key,
                    v8::Local<v8::String> value) = 0;
@@ -295,7 +318,7 @@ class KVStore {
   virtual v8::Local<v8::Array> Enumerate(v8::Isolate* isolate) const = 0;
 
   virtual std::shared_ptr<KVStore> Clone(v8::Isolate* isolate) const;
-  virtual v8::Maybe<bool> AssignFromObject(v8::Local<v8::Context> context,
+  virtual v8::Maybe<void> AssignFromObject(v8::Local<v8::Context> context,
                                            v8::Local<v8::Object> entries);
   v8::Maybe<bool> AssignToObject(v8::Isolate* isolate,
                                  v8::Local<v8::Context> context,
@@ -332,14 +355,6 @@ inline v8::Local<v8::String> FIXED_ONE_BYTE_STRING(
     const std::array<char, N>& arr) {
   return OneByteString(isolate, arr.data(), N - 1);
 }
-
-
-
-// Swaps bytes in place. nbytes is the number of bytes to swap and must be a
-// multiple of the word size (checked by function).
-inline void SwapBytes16(char* data, size_t nbytes);
-inline void SwapBytes32(char* data, size_t nbytes);
-inline void SwapBytes64(char* data, size_t nbytes);
 
 // tolower() is locale-sensitive.  Use ToLower() instead.
 inline char ToLower(char c);
@@ -411,19 +426,7 @@ class MaybeStackBuffer {
   // This method can be called multiple times throughout the lifetime of the
   // buffer, but once this has been called Invalidate() cannot be used.
   // Content of the buffer in the range [0, length()) is preserved.
-  void AllocateSufficientStorage(size_t storage) {
-    CHECK(!IsInvalidated());
-    if (storage > capacity()) {
-      bool was_allocated = IsAllocated();
-      T* allocated_ptr = was_allocated ? buf_ : nullptr;
-      buf_ = Realloc(allocated_ptr, storage);
-      capacity_ = storage;
-      if (!was_allocated && length_ > 0)
-        memcpy(buf_, buf_st_, length_ * sizeof(buf_[0]));
-    }
-
-    length_ = storage;
-  }
+  void AllocateSufficientStorage(size_t storage);
 
   void SetLength(size_t length) {
     // capacity() returns how much memory is actually available.
@@ -485,6 +488,11 @@ class MaybeStackBuffer {
       free(buf_);
   }
 
+  inline std::basic_string<T> ToString() const { return {out(), length()}; }
+  inline std::basic_string_view<T> ToStringView() const {
+    return {out(), length()};
+  }
+
  private:
   size_t length_;
   // capacity of the malloc'ed buf_
@@ -510,6 +518,7 @@ class ArrayBufferViewContents {
   inline void Read(v8::Local<v8::ArrayBufferView> abv);
   inline void ReadValue(v8::Local<v8::Value> buf);
 
+  inline bool WasDetached() const { return was_detached_; }
   inline const T* data() const { return data_; }
   inline size_t length() const { return length_; }
 
@@ -524,6 +533,7 @@ class ArrayBufferViewContents {
   T stack_storage_[kStackStorageSize];
   T* data_ = nullptr;
   size_t length_ = 0;
+  bool was_detached_ = false;
 };
 
 class Utf8Value : public MaybeStackBuffer<char> {
@@ -531,10 +541,12 @@ class Utf8Value : public MaybeStackBuffer<char> {
   explicit Utf8Value(v8::Isolate* isolate, v8::Local<v8::Value> value);
 
   inline std::string ToString() const { return std::string(out(), length()); }
-
-  inline bool operator==(const char* a) const {
-    return strcmp(out(), a) == 0;
+  inline std::string_view ToStringView() const {
+    return std::string_view(out(), length());
   }
+
+  inline bool operator==(const char* a) const { return strcmp(out(), a) == 0; }
+  inline bool operator!=(const char* a) const { return !(*this == a); }
 };
 
 class TwoByteValue : public MaybeStackBuffer<uint16_t> {
@@ -547,6 +559,9 @@ class BufferValue : public MaybeStackBuffer<char> {
   explicit BufferValue(v8::Isolate* isolate, v8::Local<v8::Value> value);
 
   inline std::string ToString() const { return std::string(out(), length()); }
+  inline std::string_view ToStringView() const {
+    return std::string_view(out(), length());
+  }
 };
 
 #define SPREAD_BUFFER_ARG(val, name)                                           \
@@ -576,12 +591,6 @@ struct OnScopeLeaveImpl {
     : fn_(std::move(other.fn_)), active_(other.active_) {
     other.active_ = false;
   }
-  OnScopeLeaveImpl& operator=(OnScopeLeaveImpl&& other) {
-    if (this == &other) return *this;
-    this->~OnScopeLeave();
-    new (this)OnScopeLeaveImpl(std::move(other));
-    return *this;
-  }
 };
 
 // Run a function when exiting the current scope. Used like this:
@@ -606,7 +615,7 @@ struct MallocedBuffer {
   }
 
   void Truncate(size_t new_size) {
-    CHECK(new_size <= size);
+    CHECK_LE(new_size, size);
     size = new_size;
   }
 
@@ -615,7 +624,7 @@ struct MallocedBuffer {
     data = UncheckedRealloc(data, new_size);
   }
 
-  inline bool is_empty() const { return data == nullptr; }
+  bool is_empty() const { return data == nullptr; }
 
   MallocedBuffer() : data(nullptr), size(0) {}
   explicit MallocedBuffer(size_t size) : data(Malloc<T>(size)), size(size) {}
@@ -684,9 +693,18 @@ struct FunctionDeleter {
 template <typename T, void (*function)(T*)>
 using DeleteFnPtr = typename FunctionDeleter<T, function>::Pointer;
 
-std::vector<std::string> SplitString(const std::string& in,
-                                     char delim,
-                                     bool skipEmpty = true);
+// Convert a v8::Array into an std::vector using the callback-based API.
+// This can be faster than calling Array::Get() repeatedly when the array
+// has more than 2 entries.
+// Note that iterating over an array in C++ and performing operations on each
+// element in a C++ loop is still slower than iterating over the array in JS
+// and calling into native in the JS loop repeatedly on each element,
+// as of V8 11.9.
+inline v8::Maybe<void> FromV8Array(v8::Local<v8::Context> context,
+                                   v8::Local<v8::Array> js_array,
+                                   std::vector<v8::Global<v8::Value>>* out);
+std::vector<std::string_view> SplitString(const std::string_view in,
+                                          const std::string_view delim);
 
 inline v8::MaybeLocal<v8::Value> ToV8Value(v8::Local<v8::Context> context,
                                            std::string_view str,
@@ -755,37 +773,16 @@ inline v8::MaybeLocal<v8::Value> ToV8Value(v8::Local<v8::Context> context,
         .Check();                                                              \
   } while (0)
 
-enum class Endianness { LITTLE, BIG };
-
-inline Endianness GetEndianness() {
-  // Constant-folded by the compiler.
-  const union {
-    uint8_t u8[2];
-    uint16_t u16;
-  } u = {{1, 0}};
-  return u.u16 == 1 ? Endianness::LITTLE : Endianness::BIG;
+constexpr inline bool IsLittleEndian() {
+  return std::endian::native == std::endian::little;
 }
 
-inline bool IsLittleEndian() {
-  return GetEndianness() == Endianness::LITTLE;
+constexpr inline bool IsBigEndian() {
+  return std::endian::native == std::endian::big;
 }
 
-inline bool IsBigEndian() {
-  return GetEndianness() == Endianness::BIG;
-}
-
-// Round up a to the next highest multiple of b.
-template <typename T>
-constexpr T RoundUp(T a, T b) {
-  return a % b != 0 ? a + b - (a % b) : a;
-}
-
-// Align ptr to an `alignment`-bytes boundary.
-template <typename T, typename U>
-constexpr T* AlignUp(T* ptr, U alignment) {
-  return reinterpret_cast<T*>(
-      RoundUp(reinterpret_cast<uintptr_t>(ptr), alignment));
-}
+static_assert(IsLittleEndian() || IsBigEndian(),
+              "Node.js does not support mixed-endian systems");
 
 class SlicedArguments : public MaybeStackBuffer<v8::Local<v8::Value>> {
  public:
@@ -837,20 +834,20 @@ class PersistentToLocal {
 // computations.
 class FastStringKey {
  public:
-  constexpr explicit FastStringKey(const char* name);
+  constexpr explicit FastStringKey(std::string_view name);
 
   struct Hash {
     constexpr size_t operator()(const FastStringKey& key) const;
   };
   constexpr bool operator==(const FastStringKey& other) const;
 
-  constexpr const char* c_str() const;
+  constexpr std::string_view as_string_view() const;
 
  private:
-  static constexpr size_t HashImpl(const char* str);
+  static constexpr size_t HashImpl(std::string_view str);
 
-  const char* name_;
-  size_t cached_hash_;
+  const std::string_view name_;
+  const size_t cached_hash_;
 };
 
 // Like std::static_pointer_cast but for unique_ptr with the default deleter.
@@ -864,6 +861,8 @@ std::unique_ptr<T> static_unique_pointer_cast(std::unique_ptr<U>&& ptr) {
 // Returns a non-zero code if it fails to open or read the file,
 // aborts if it fails to close the file.
 int ReadFileSync(std::string* result, const char* path);
+// Reads all contents of a FILE*, aborts if it fails.
+std::vector<char> ReadFileSync(FILE* fp);
 
 v8::Local<v8::FunctionTemplate> NewFunctionTemplate(
     v8::Isolate* isolate,
@@ -876,34 +875,68 @@ v8::Local<v8::FunctionTemplate> NewFunctionTemplate(
 // Convenience methods for NewFunctionTemplate().
 void SetMethod(v8::Local<v8::Context> context,
                v8::Local<v8::Object> that,
-               const char* name,
+               const std::string_view name,
+               v8::FunctionCallback callback);
+// Similar to SetProtoMethod but without receiver signature checks.
+void SetMethod(v8::Isolate* isolate,
+               v8::Local<v8::Template> that,
+               const std::string_view name,
                v8::FunctionCallback callback);
 
-void SetFastMethod(v8::Local<v8::Context> context,
-                   v8::Local<v8::Object> that,
-                   const char* name,
+void SetFastMethod(v8::Isolate* isolate,
+                   v8::Local<v8::Template> that,
+                   const std::string_view name,
                    v8::FunctionCallback slow_callback,
                    const v8::CFunction* c_function);
-
+void SetFastMethod(v8::Local<v8::Context> context,
+                   v8::Local<v8::Object> that,
+                   const std::string_view name,
+                   v8::FunctionCallback slow_callback,
+                   const v8::CFunction* c_function);
+void SetFastMethod(v8::Isolate* isolate,
+                   v8::Local<v8::Template> that,
+                   const std::string_view name,
+                   v8::FunctionCallback slow_callback,
+                   const v8::MemorySpan<const v8::CFunction>& methods);
+void SetFastMethodNoSideEffect(v8::Isolate* isolate,
+                               v8::Local<v8::Template> that,
+                               const std::string_view name,
+                               v8::FunctionCallback slow_callback,
+                               const v8::CFunction* c_function);
+void SetFastMethodNoSideEffect(v8::Local<v8::Context> context,
+                               v8::Local<v8::Object> that,
+                               const std::string_view name,
+                               v8::FunctionCallback slow_callback,
+                               const v8::CFunction* c_function);
+void SetFastMethodNoSideEffect(
+    v8::Isolate* isolate,
+    v8::Local<v8::Template> that,
+    const std::string_view name,
+    v8::FunctionCallback slow_callback,
+    const v8::MemorySpan<const v8::CFunction>& methods);
 void SetProtoMethod(v8::Isolate* isolate,
                     v8::Local<v8::FunctionTemplate> that,
-                    const char* name,
+                    const std::string_view name,
                     v8::FunctionCallback callback);
 
 void SetInstanceMethod(v8::Isolate* isolate,
                        v8::Local<v8::FunctionTemplate> that,
-                       const char* name,
+                       const std::string_view name,
                        v8::FunctionCallback callback);
 
 // Safe variants denote the function has no side effects.
 void SetMethodNoSideEffect(v8::Local<v8::Context> context,
                            v8::Local<v8::Object> that,
-                           const char* name,
+                           const std::string_view name,
                            v8::FunctionCallback callback);
 void SetProtoMethodNoSideEffect(v8::Isolate* isolate,
                                 v8::Local<v8::FunctionTemplate> that,
-                                const char* name,
+                                const std::string_view name,
                                 v8::FunctionCallback callback);
+void SetMethodNoSideEffect(v8::Isolate* isolate,
+                           v8::Local<v8::Template> that,
+                           const std::string_view name,
+                           v8::FunctionCallback callback);
 
 enum class SetConstructorFunctionFlag {
   NONE,
@@ -923,6 +956,59 @@ void SetConstructorFunction(v8::Local<v8::Context> context,
                             v8::Local<v8::FunctionTemplate> tmpl,
                             SetConstructorFunctionFlag flag =
                                 SetConstructorFunctionFlag::SET_CLASS_NAME);
+
+void SetConstructorFunction(v8::Isolate* isolate,
+                            v8::Local<v8::Template> that,
+                            const char* name,
+                            v8::Local<v8::FunctionTemplate> tmpl,
+                            SetConstructorFunctionFlag flag =
+                                SetConstructorFunctionFlag::SET_CLASS_NAME);
+
+void SetConstructorFunction(v8::Isolate* isolate,
+                            v8::Local<v8::Template> that,
+                            v8::Local<v8::String> name,
+                            v8::Local<v8::FunctionTemplate> tmpl,
+                            SetConstructorFunctionFlag flag =
+                                SetConstructorFunctionFlag::SET_CLASS_NAME);
+
+// Like RAIIIsolate, except doesn't enter the isolate while it's in scope.
+class RAIIIsolateWithoutEntering {
+ public:
+  explicit RAIIIsolateWithoutEntering(const SnapshotData* data = nullptr);
+  ~RAIIIsolateWithoutEntering();
+
+  v8::Isolate* get() const { return isolate_; }
+
+ private:
+  std::unique_ptr<v8::ArrayBuffer::Allocator> allocator_;
+  v8::Isolate* isolate_;
+};
+
+// Simple RAII class to spin up a v8::Isolate instance and enter it
+// immediately.
+class RAIIIsolate {
+ public:
+  explicit RAIIIsolate(const SnapshotData* data = nullptr);
+  ~RAIIIsolate();
+
+  v8::Isolate* get() const { return isolate_.get(); }
+
+ private:
+  RAIIIsolateWithoutEntering isolate_;
+  v8::Isolate::Scope isolate_scope_;
+};
+
+std::string DetermineSpecificErrorType(Environment* env,
+                                       v8::Local<v8::Value> input);
+
+v8::Maybe<int32_t> GetValidatedFd(Environment* env, v8::Local<v8::Value> input);
+v8::Maybe<int> GetValidFileMode(Environment* env,
+                                v8::Local<v8::Value> input,
+                                uv_fs_type type);
+
+// Returns true if OS==Windows and filename ends in .bat or .cmd,
+// case insensitive.
+inline bool IsWindowsBatchFile(const char* filename);
 
 }  // namespace node
 

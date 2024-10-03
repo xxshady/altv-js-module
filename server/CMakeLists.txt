@@ -71,6 +71,7 @@ include_directories(
   deps/nodejs/deps/v8/include
   deps/nodejs/deps/uv/include
   deps/nodejs/deps/openssl/openssl/include
+  deps/nodejs/deps/simdjson
   ../shared
   ../shared/deps
 )
@@ -157,5 +158,5 @@ if (WIN32)
 endif (WIN32)
 
 if (UNIX)
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/deps/nodejs/lib/libnode.so.108)
+  target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/deps/nodejs/lib/libnode.so)
 endif (UNIX)
