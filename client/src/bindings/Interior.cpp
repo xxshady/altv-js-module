@@ -9,11 +9,15 @@ static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_CHECK_ARGS_LEN(1);
     V8_ARG_TO_UINT(1, interiorId);
 
-    auto interior = alt::ICore::Instance().GetInterior(interiorId);
+    std::shared_ptr<alt::IInterior> interior = alt::ICore::Instance().GetInterior(interiorId);
     V8_CHECK(interior, "interior doesn't exist");
 
-    V8Helpers::SetObjectClass(info.GetIsolate(), info.This(), V8Class::ObjectClass::INTERIOR);
-    info.This()->SetInternalField(1, v8::External::New(isolate, interior.get()));
+    v8::Local<v8::External> interiorRef = v8::External::New(isolate, new std::weak_ptr<alt::IInterior>(interior));
+
+    v8::Persistent<v8::Object> persistent(isolate, info.This());
+    persistent.SetWeak();
+
+    info.This()->SetInternalField(1, interiorRef);
 }
 
 static void GetForInteriorID(const v8::FunctionCallbackInfo<v8::Value>& info)
