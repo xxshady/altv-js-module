@@ -66,6 +66,10 @@
         V8_CHECK(val, "baseobject is not of type " #type);                                                                                           \
     }
 
+#define V8_GET_THIS_INTERNAL_FIELD_BOOLEAN(idx, val)                                                                        \
+    V8_CHECK(info.This()->InternalFieldCount() > idx - 1, "Invalid internal field count (is the 'this' context correct?)"); \
+    auto val = info.This()->GetInternalField(idx).As<v8::Value>()->BooleanValue(isolate);
+
 #define V8_GET_THIS_INTERNAL_FIELD_INTEGER(idx, val)                                                                        \
     V8_CHECK(info.This()->InternalFieldCount() > idx - 1, "Invalid internal field count (is the 'this' context correct?)"); \
     auto val = info.This()->GetInternalField(idx).As<v8::Value>()->IntegerValue(ctx).ToChecked();
