@@ -43,6 +43,9 @@ public:
         AUDIO_CATEGORY,
         HANDLING,
         HANDLING_DATA,
+        INTERIOR,
+        INTERIOR_ROOM,
+        INTERIOR_PORTAL,
         MAP_ZOOM_DATA,
         WEAPON_DATA
     };

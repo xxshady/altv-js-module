@@ -66,6 +66,10 @@
         V8_CHECK(val, "baseobject is not of type " #type);                                                                                           \
     }
 
+#define V8_GET_THIS_INTERNAL_FIELD_BOOLEAN(idx, val)                                                                        \
+    V8_CHECK(info.This()->InternalFieldCount() > idx - 1, "Invalid internal field count (is the 'this' context correct?)"); \
+    auto val = info.This()->GetInternalField(idx).As<v8::Value>()->BooleanValue(isolate);
+
 #define V8_GET_THIS_INTERNAL_FIELD_INTEGER(idx, val)                                                                        \
     V8_CHECK(info.This()->InternalFieldCount() > idx - 1, "Invalid internal field count (is the 'this' context correct?)"); \
     auto val = info.This()->GetInternalField(idx).As<v8::Value>()->IntegerValue(ctx).ToChecked();
@@ -372,3 +376,26 @@
         Log::Warning << V8Helpers::SourceLocation::GetCurrent(isolate, resource).ToString(isolate) << " " << oldName << " is deprecated and will be removed in future versions. Consider using " \
                      << newName << " instead" << Log::Endl;                                                                                                                               \
     }
+
+#define GET_THIS_INTERIOR_PORTAL(val)                                                 \
+    V8_GET_ISOLATE_CONTEXT();                                                                  \
+    V8_GET_THIS_INTERNAL_FIELD_UINT32(1, interiorId);                                          \
+    V8_GET_THIS_INTERNAL_FIELD_UINT32(2, portalIndex);                                         \
+    auto interior = alt::ICore::Instance().GetInterior(interiorId);                            \
+    V8_CHECK(interior, "interior doesn't exist");                                              \
+    std::shared_ptr<alt::IInteriorPortal> portal = interior->GetPortalByIndex(portalIndex);    \
+    V8_CHECK(portal, "interior portal doesn't exist")
+
+#define GET_THIS_INTERIOR_ROOM(val)                                        \
+    V8_GET_ISOLATE_CONTEXT();                                                       \
+    V8_GET_THIS_INTERNAL_FIELD_UINT32(1, interiorId);                               \
+    V8_GET_THIS_INTERNAL_FIELD_UINT32(2, roomIndex);                                \
+    auto interior = alt::ICore::Instance().GetInterior(interiorId);                 \
+    V8_CHECK(interior, "interior doesn't exist");                                   \
+    std::shared_ptr<alt::IInteriorRoom> val = interior->GetRoomByIndex(roomIndex); \
+    V8_CHECK(val, "interior room doesn't exist")
+
+#define INTERIOR_EXTENT_TO_OBJECT(extentInfo, val)                                        \
+    v8::Local<v8::Object> val = v8::Object::New(isolate);                              \
+    val->Set(ctx, V8Helpers::JSValue("min"), resource->CreateVector3(extentInfo.min)); \
+    val->Set(ctx, V8Helpers::JSValue("max"), resource->CreateVector3(extentInfo.max)); \
