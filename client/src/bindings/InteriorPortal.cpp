@@ -141,6 +141,13 @@ static void GetCornerPos(const v8::FunctionCallbackInfo<v8::Value>& info)
 }
 
 
+static void EntityCountGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    GET_THIS_INTERIOR_PORTAL(portal);
+
+    V8_RETURN_UINT(portal->GetEntityCount());
+}
+
 static void SetCornerPos(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     GET_THIS_INTERIOR_PORTAL(portal);
@@ -165,6 +172,7 @@ extern V8Class v8InteriorPortal("InteriorPortal",
                                   V8Helpers::SetAccessor(isolate, tpl, "roomFrom", &RoomFromGetter, &RoomFromSetter);
                                   V8Helpers::SetAccessor(isolate, tpl, "roomTo", &RoomToGetter, &RoomToSetter);
                                   V8Helpers::SetAccessor(isolate, tpl, "flag", &FlagGetter, &FlagSetter);
+                                  V8Helpers::SetAccessor(isolate, tpl, "entityCount", &EntityCountGetter);
 
                                   V8Helpers::SetMethod(isolate, tpl, "getCornerPos", &GetCornerPos);
                                   V8Helpers::SetMethod(isolate, tpl, "getEntityArchetype", &GetEntityArchetype);
