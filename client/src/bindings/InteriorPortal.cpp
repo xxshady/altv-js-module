@@ -168,7 +168,7 @@ extern V8Class v8InteriorPortal("InteriorPortal",
 
                                   V8Helpers::SetMethod(isolate, tpl, "getCornerPos", &GetCornerPos);
                                   V8Helpers::SetMethod(isolate, tpl, "getEntityArchetype", &GetEntityArchetype);
-                                  V8Helper::SetMethod(isolate, tpl, "getEntityFlag", &GetEntityFlag);
+                                  V8Helpers::SetMethod(isolate, tpl, "getEntityFlag", &GetEntityFlag);
                                   V8Helpers::SetMethod(isolate, tpl, "setEntityFlag", &SetEntityFlag);
                                   V8Helpers::SetMethod(isolate, tpl, "getEntityPos", &GetEntityPos);
                                   V8Helpers::SetMethod(isolate, tpl, "getEntityRot", &GetEntityRot);
