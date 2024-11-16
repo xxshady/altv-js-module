@@ -19,7 +19,6 @@ static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
     if(isIndex)
     {
         room = interior->GetRoomByIndex(value);
-        V8_CHECK(room, "interior room doesn't exist");
     }
     else
     {
