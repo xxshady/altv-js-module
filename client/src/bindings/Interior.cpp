@@ -138,7 +138,7 @@ static void GetPortalByIndex(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_RETURN(v8InteriorPortal.New(isolate->GetEnteredOrMicrotaskContext(), args));
 }
 
-static void IdGetter(const v8::FunctionCallbackInfo<v8::Value>& info)
+static void IdGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT();
     V8_GET_THIS_INTERNAL_FIELD_UINT32(1, interiorId);
