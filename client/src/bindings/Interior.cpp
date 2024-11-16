@@ -138,6 +138,13 @@ static void GetPortalByIndex(const v8::FunctionCallbackInfo<v8::Value>& info)
     V8_RETURN(v8InteriorPortal.New(isolate->GetEnteredOrMicrotaskContext(), args));
 }
 
+static void IdGetter(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+    V8_GET_ISOLATE_CONTEXT();
+    V8_GET_THIS_INTERNAL_FIELD_UINT32(1, interiorId);
+    V8_RETURN_UINT(interiorId);
+}
+
 extern V8Class v8Interior("Interior",
                           Constructor,
                           [](v8::Local<v8::FunctionTemplate> tpl)
@@ -155,6 +162,7 @@ extern V8Class v8Interior("Interior",
                               V8Helpers::SetAccessor(isolate, tpl, "pos", &PositionGetter);
                               V8Helpers::SetAccessor(isolate, tpl, "rot", &RotationGetter);
                               V8Helpers::SetAccessor(isolate, tpl, "entitiesExtents", &EntitiesExtentsGetter);
+                              V8Helpers::SetAccessor(isolate, tpl, "id", &IdGetter);
 
                               V8Helpers::SetStaticMethod(isolate, tpl, "getForInteriorID", &GetForInteriorID);
                           });

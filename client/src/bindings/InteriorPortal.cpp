@@ -5,14 +5,14 @@
 static void Constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     V8_GET_ISOLATE_CONTEXT();
-    V8_CHECK_CONSTRUCTOR()
+    V8_CHECK_CONSTRUCTOR();
 
-    V8_CHECK_ARGS_LEN(3)
-    V8_ARG_TO_UINT(1, interiorId)
-    V8_ARG_TO_UINT(2, portalIndex)
+    V8_CHECK_ARGS_LEN(2);
+    V8_ARG_TO_UINT(1, interiorId);
+    V8_ARG_TO_UINT(2, portalIndex);
 
     std::shared_ptr<alt::IInterior> interior = alt::ICore::Instance().GetInterior(interiorId);
-    V8_CHECK(interior, "interior doesn't exist")
+    V8_CHECK(interior, "interior doesn't exist");
 
     std::shared_ptr<alt::IInteriorPortal> portal = interior->GetPortalByIndex(portalIndex);
     V8_CHECK(portal, "interior portal doesn't exist");
